@@ -1,4 +1,4 @@
-//! Main entrypoint for the `wfig` CLI.
+//! Main entrypoint for the `favis` CLI.
 
 use anyhow::Result;
 use clap::{Parser, CommandFactory};
@@ -65,7 +65,7 @@ fn main() -> Result<()> {
                 
                 // Create a temporary file path for the original-sized PNG
                 let temp_dir = std::env::temp_dir();
-                let temp_file = temp_dir.join("wfig_temp_original.png");
+                let temp_file = temp_dir.join("favis_temp_original.png");
                 let temp_path = temp_file.to_string_lossy();
                 
                 // Save the original image to the temp file

@@ -1,13 +1,13 @@
-//! CLI argument definitions for wfig
+//! CLI argument definitions for favis
 
 use clap::{Parser, Subcommand, ValueEnum};
 
 #[derive(Parser)]
 #[command(
-    name = "wfig",
+    name = "favis",
     about = "Generate web favicons and manifest for your PWA or website.",
     long_about = "\
-wfig is a CLI tool to generate favicon PNGs, ICOs, and web manifests from a single image source.
+favis is a CLI tool to generate favicon PNGs, ICOs, and web manifests from a single image source.
 
 Overview:
   - Creates multiple PNG favicon images in industry-standard sizes
@@ -16,15 +16,15 @@ Overview:
   - Can create HTML <link> tags from an existing manifest
 
 Usage:
-  wfig generate logo.svg                       # Basic usage with default settings
-  wfig generate logo.svg --manifest            # Also create a manifest.webmanifest
-  wfig generate logo.svg --coverage extended   # Generate all possible icon sizes
-  wfig link ./public/manifest.webmanifest      # Create HTML link tags from a manifest
+  favis generate logo.svg                       # Basic usage with default settings
+  favis generate logo.svg --manifest            # Also create a manifest.webmanifest
+  favis generate logo.svg --coverage extended   # Generate all possible icon sizes
+  favis link ./public/manifest.webmanifest      # Create HTML link tags from a manifest
 
 Tips:
   - SVG sources are strongly recommended for best quality at all sizes
   - Use --output to specify where generated files should be saved
-  - Run 'wfig <SUBCOMMAND> --help' for detailed options for each command
+  - Run 'favis <SUBCOMMAND> --help' for detailed options for each command
 ",
     author,
     version,
@@ -60,13 +60,13 @@ Output:
 
 Examples:
   # Basic usage with default settings
-  wfig generate logo.svg
+  favis generate logo.svg
   
   # Generate all icon sizes and a manifest to the public directory
-  wfig generate logo.svg --coverage extended --manifest --output ./public
+  favis generate logo.svg --coverage extended --manifest --output ./public
   
   # Using a PNG source (not recommended, but supported)
-  wfig generate logo.png --raster-ok
+  favis generate logo.png --raster-ok
 "
     )]
     Generate {
@@ -127,13 +127,13 @@ Purpose:
 
 Examples:
   # Print link tags to stdout (default)
-  wfig link ./public/manifest.webmanifest
+  favis link ./public/manifest.webmanifest
   
   # Create a file with link tags, using a base URL prefix for all icons
-  wfig link ./public/manifest.webmanifest --base /assets/icons --output ./public/favicon-links.html
+  favis link ./public/manifest.webmanifest --base /assets/icons --output ./public/favicon-links.html
   
   # Base URL is useful when icons are served from a different path than HTML
-  wfig link ./manifest.webmanifest --base https://cdn.example.com/icons
+  favis link ./manifest.webmanifest --base https://cdn.example.com/icons
 "
     )]
     Link {
