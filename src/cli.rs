@@ -6,10 +6,29 @@ use clap::{Parser, Subcommand, ValueEnum};
 #[command(
     name = "wfig",
     about = "Generate web favicons and manifest for your PWA or website.",
-    long_about = "wfig is a CLI tool to generate favicon PNGs, ICOs, and web manifests from a single image (PNG, JPG, SVG).",
+    long_about = "\
+wfig is a CLI tool to generate favicon PNGs, ICOs, and web manifests from a single image source.
+
+Overview:
+  - Creates multiple PNG favicon images in industry-standard sizes
+  - Generates a favicon.ico file with multiple sizes embedded
+  - Optionally generates a web manifest file for PWAs
+  - Can create HTML <link> tags from an existing manifest
+
+Usage:
+  wfig generate logo.svg                       # Basic usage with default settings
+  wfig generate logo.svg --manifest            # Also create a manifest.webmanifest
+  wfig generate logo.svg --coverage extended   # Generate all possible icon sizes
+  wfig link ./public/manifest.webmanifest      # Create HTML link tags from a manifest
+
+Tips:
+  - SVG sources are strongly recommended for best quality at all sizes
+  - Use --output to specify where generated files should be saved
+  - Run 'wfig <SUBCOMMAND> --help' for detailed options for each command
+",
     author,
     version,
-    arg_required_else_help = true
+    arg_required_else_help = true,
 )]
 pub struct Cli {
     #[command(subcommand)]
@@ -18,9 +37,9 @@ pub struct Cli {
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, ValueEnum)]
 pub enum SizeLevel {
-    /// Only required sizes (minimal set)
+    /// Only required sizes (minimal set, fastest)
     Required,
-    /// Recommended sizes (good compatibility)
+    /// Recommended sizes (good compatibility, default)
     Recommended,
     /// All sizes (maximum compatibility)
     Extended,
@@ -28,41 +47,118 @@ pub enum SizeLevel {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    /// Generate icons and manifest from a source image
+    /// Generate favicon PNGs, ICO, and manifest from a source image
+    #[command(
+        about = "Generate icons and manifest from a source image",
+        long_about = "\
+Generate favicon PNGs, ICO, and optionally a web manifest from a single source image.
+
+Output:
+  - Multiple PNG favicon files in various sizes (e.g., favicon-32x32.png)
+  - A single favicon.ico file with multiple sizes embedded
+  - Optional manifest.webmanifest file for PWAs
+
+Examples:
+  # Basic usage with default settings
+  wfig generate logo.svg
+  
+  # Generate all icon sizes and a manifest to the public directory
+  wfig generate logo.svg --coverage extended --manifest --output ./public
+  
+  # Using a PNG source (not recommended, but supported)
+  wfig generate logo.png --raster-ok
+"
+    )]
     Generate {
-        /// Source image file (SVG preferred)
-        #[arg(help = "Path to the source image file (SVG preferred)")]
+        /// Path to the source image file (SVG preferred)
+        #[arg(
+            help = "Source image file (SVG strongly recommended for quality)",
+            value_name = "SOURCE",
+        )]
         source: String,
 
-        /// Icon size coverage level
-        #[arg(short, long, value_enum, default_value = "recommended", help = "Icon size coverage: required, recommended, or extended")]
+        /// Icon size coverage: required, recommended, or extended
+        #[arg(
+            short,
+            long,
+            value_enum,
+            default_value = "recommended",
+            help = "Icon size coverage level (affects number of icons generated)",
+            value_name = "COVERAGE",
+        )]
         coverage: SizeLevel,
 
-        /// Also generate a webmanifest
-        #[arg(short, long, help = "Also generate a web manifest file")]
+        /// Also generate a web manifest file
+        #[arg(
+            short,
+            long,
+            help = "Generate a manifest.webmanifest file for PWAs",
+        )]
         manifest: bool,
 
         /// Output directory for generated files
-        #[arg(short, long, default_value = ".", help = "Output directory for generated files")]
+        #[arg(
+            short,
+            long,
+            default_value = ".",
+            help = "Directory where generated files will be saved",
+            value_name = "DIR",
+        )]
         output: String,
         
         /// Allow raster source images (PNG/JPG) despite quality concerns
-        #[arg(long, help = "Allow raster source images (PNG/JPG) despite quality concerns")]
+        #[arg(
+            long,
+            help = "Allow raster sources (PNG/JPG) despite quality concerns at large sizes",
+        )]
         raster_ok: bool,
     },
     
-    /// Generate HTML link tags from a webmanifest file
+    /// Generate HTML <link> tags from a webmanifest file
+    #[command(
+        about = "Generate HTML <link> tags from a manifest.webmanifest",
+        long_about = "\
+Generate HTML <link> tags for favicon and app icons defined in a manifest.webmanifest file.
+
+Purpose:
+  - Creates the proper <link> tags needed in your HTML head section
+  - Automatically sets correct 'rel' attributes based on icon purposes
+  - Organizes tags by importance and size
+
+Examples:
+  # Print link tags to stdout (default)
+  wfig link ./public/manifest.webmanifest
+  
+  # Create a file with link tags, using a base URL prefix for all icons
+  wfig link ./public/manifest.webmanifest --base /assets/icons --output ./public/favicon-links.html
+  
+  # Base URL is useful when icons are served from a different path than HTML
+  wfig link ./manifest.webmanifest --base https://cdn.example.com/icons
+"
+    )]
     Link {
         /// Path to the manifest.webmanifest file
-        #[arg(help = "Path to the manifest.webmanifest file")]
+        #[arg(
+            help = "Path to existing manifest.webmanifest file to read",
+            value_name = "MANIFEST",
+        )]
         manifest: String,
         
         /// Base URL path to prefix for all icon links
-        #[arg(long, help = "Base URL path to prefix for all icon links")]
+        #[arg(
+            long,
+            help = "Base URL to prefix for all icon paths (e.g., /assets or https://cdn.example.com)",
+            value_name = "URL",
+        )]
         base: Option<String>,
         
-        /// Output HTML file path
-        #[arg(short, long, help = "Output HTML file path")]
+        /// Output HTML file path (default: print to stdout)
+        #[arg(
+            short,
+            long,
+            help = "Save HTML to file instead of printing to stdout",
+            value_name = "FILE",
+        )]
         output: Option<String>,
     },
 }
