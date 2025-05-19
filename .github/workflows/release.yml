@@ -2,109 +2,105 @@ name: Release
 
 on:
   push:
-    tags: ['v*']
-    branches: [main]
+    tags:
+      - 'v*'           # e.g. v1.0.0, v2.1.3
+    branches:
+      - main
 
 permissions:
-  contents: write
+  contents: write     # allows creating releases + uploading assets
 
 jobs:
-  build-and-publish:
-    name: Build & Publish Release
+  # ────────────────────────────────────────────────────────────────────────
+  # 1. CREATE RELEASE (runs only once)
+  # ────────────────────────────────────────────────────────────────────────
+  create_release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create Release
+        id: create
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name:    ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
+          draft:       false
+          prerelease:  false
+
+  # ────────────────────────────────────────────────────────────────────────
+  # 2. BUILD & UPLOAD ASSETS (matrix)
+  # ────────────────────────────────────────────────────────────────────────
+  build_and_upload:
+    name: Build & Upload Assets
+    needs: create_release
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         include:
-          # Linux build
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             ext: ""
-          # Windows build
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            ext: ".exe"
-          # macOS build
           - os: macos-latest
             target: x86_64-apple-darwin
             ext: ""
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            ext: ".exe"
 
     steps:
-
-      # ┌────────────────────────────────────────────────────────────────────┐
-      # │ 1. PREPARE SOURCE                                                   │
-      # └────────────────────────────────────────────────────────────────────┘
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ┌────────────────────────────────────────────────────────────────────┐
-      # │ 2. SET UP TOOLCHAIN                                                │
-      # └────────────────────────────────────────────────────────────────────┘
-      - name: Install Rust (stable)
+      - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
 
-      # ┌────────────────────────────────────────────────────────────────────┐
-      # │ 3. BUILD BINARY                                                    │
-      # └────────────────────────────────────────────────────────────────────┘
       - name: Build release binary
         run: cargo build --release --target ${{ matrix.target }}
 
-      # ┌────────────────────────────────────────────────────────────────────┐
-      # │ 4. PREPARE DISTRIBUTABLE                                           │
-      # └────────────────────────────────────────────────────────────────────┘
-      - name: Create distribution folder
+      - name: Prepare artifact directory
         run: mkdir -p dist
 
-      - name: Copy and rename binary (Linux/macOS)
-        if: runner.os != 'Windows'
+      - name: Copy & rename binary
         run: |
-          cp \
-            target/${{ matrix.target }}/release/favis${{ matrix.ext }} \
-            dist/favis-${{ matrix.target }}${{ matrix.ext }}
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            cp "target\\${{ matrix.target }}\\release\\mytool${{ matrix.ext }}" "dist/mytool-${{ matrix.target }}${{ matrix.ext }}"
+          else
+            cp target/${{ matrix.target }}/release/mytool${{ matrix.ext }} dist/mytool-${{ matrix.target }}${{ matrix.ext }}
+          fi
 
-      - name: Copy and rename binary (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
+      - name: Generate SHA256 checksum
+        working-directory: dist
+        shell: bash
         run: |
-          Copy-Item -Path "target\${{ matrix.target }}\release\favis${{ matrix.ext }}" -Destination "dist\favis-${{ matrix.target }}${{ matrix.ext }}"
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            powershell -Command "Get-FileHash -Algorithm SHA256 mytool-${{ matrix.target }}${{ matrix.ext }} | ForEach-Object { \"$($_.Hash) *mytool-${{ matrix.target }}${{ matrix.ext }}\" } | Out-File -Encoding utf8 mytool-${{ matrix.target }}${{ matrix.ext }}.sha256"
+          else
+            sha256sum mytool-${{ matrix.target }}${{ matrix.ext }} > mytool-${{ matrix.target }}${{ matrix.ext }}.sha256
+          fi
 
-      # ┌────────────────────────────────────────────────────────────────────┐
-      # │ 5. GENERATE CHECKSUM                                               │
-      # └────────────────────────────────────────────────────────────────────┘
-      - name: Generate SHA256 checksum (Linux)
-        if: runner.os == 'Linux'
-        working-directory: dist
-        run: sha256sum favis-${{ matrix.target }}${{ matrix.ext }} > favis-${{ matrix.target }}${{ matrix.ext }}.sha256
-
-      - name: Generate SHA256 checksum (macOS)
-        if: runner.os == 'macOS'
-        working-directory: dist
-        run: shasum -a 256 favis-${{ matrix.target }}${{ matrix.ext }} > favis-${{ matrix.target }}${{ matrix.ext }}.sha256
-
-      - name: Generate SHA256 checksum (Windows)
-        if: runner.os == 'Windows'
-        working-directory: dist
-        shell: powershell
-        run: |
-          $hash = (Get-FileHash -Algorithm SHA256 favis-${{ matrix.target }}${{ matrix.ext }}).Hash.ToLower()
-          $hash + " *favis-${{ matrix.target }}${{ matrix.ext }}" | Out-File -Encoding utf8 favis-${{ matrix.target }}${{ matrix.ext }}.sha256
-
-      # ┌────────────────────────────────────────────────────────────────────┐
-      # │ 6. CREATE & UPLOAD RELEASE                                         │
-      # └────────────────────────────────────────────────────────────────────┘
-      - name: Publish GitHub Release & Upload Assets
-        uses: softprops/action-gh-release@v2
-        # Note: Using GITHUB_TOKEN won't trigger workflows that run on the 'release' event
-        # If you need to trigger other workflows on release, use a personal access token instead
+      - name: Upload binary asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          # Using inputs parameter syntax instead of environment variables (preferred method)
-          token: ${{ secrets.GITHUB_TOKEN }}
-          name: Release ${{ github.ref_name }}
-          tag_name: ${{ github.ref_name }}
-          make_latest: true
-          files: |
-            dist/favis-${{ matrix.target }}${{ matrix.ext }}
-            dist/favis-${{ matrix.target }}${{ matrix.ext }}.sha256
-          generate_release_notes: true
-          fail_on_unmatched_files: true
+          upload_url:     ${{ needs.create.outputs.upload_url }}
+          asset_path:     dist/mytool-${{ matrix.target }}${{ matrix.ext }}
+          asset_name:     mytool-${{ matrix.target }}${{ matrix.ext }}
+          asset_content_type: application/octet-stream
+
+      - name: Upload checksum asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url:     ${{ needs.create.outputs.upload_url }}
+          asset_path:     dist/mytool-${{ matrix.target }}${{ matrix.ext }}.sha256
+          asset_name:     mytool-${{ matrix.target }}${{ matrix.ext }}.sha256
+          asset_content_type: text/plain
