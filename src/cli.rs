@@ -30,8 +30,8 @@ pub enum SizeLevel {
 pub enum Commands {
     /// Generate icons and manifest from a source image
     Generate {
-        /// Source vector file (SVG)
-        #[arg(short, long, help = "Path to the source vector file (SVG)")]
+        /// Source image file (SVG preferred)
+        #[arg(help = "Path to the source image file (SVG preferred)")]
         source: String,
 
         /// Icon size coverage level
