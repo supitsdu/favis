@@ -30,8 +30,8 @@ pub enum SizeLevel {
 pub enum Commands {
     /// Generate icons and manifest from a source image
     Generate {
-        /// Source image file (png, jpg, svg)
-        #[arg(short, long, help = "Path to the source image file (PNG, JPG, or SVG)")]
+        /// Source vector file (SVG)
+        #[arg(short, long, help = "Path to the source vector file (SVG)")]
         source: String,
 
         /// Icon size coverage level
@@ -45,5 +45,9 @@ pub enum Commands {
         /// Output directory for generated files
         #[arg(short, long, default_value = ".", help = "Output directory for generated files")]
         output: String,
+        
+        /// Allow raster source images (PNG/JPG) despite quality concerns
+        #[arg(long, help = "Allow raster source images (PNG/JPG) despite quality concerns")]
+        raster_ok: bool,
     },
 }

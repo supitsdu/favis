@@ -18,9 +18,23 @@ mod icon_sizes;
 fn main() -> Result<()> {
     let cli = Cli::parse();
     match cli.command {
-        Some(Commands::Generate { source, coverage, manifest: gen_manifest, output }) => {
+        Some(Commands::Generate { source, coverage, manifest: gen_manifest, output, raster_ok }) => {
+            // Check if the source file is raster (not SVG)
+            let is_svg = source.to_lowercase().ends_with(".svg");
+            if !is_svg && !raster_ok {
+                eprintln!("{}: raster source detected. Please supply an SVG for best results.", "Error".red().bold());
+                eprintln!("(Override with --raster-ok, but expect quality loss.)");
+                std::process::exit(1);
+            }
+
             // Setup progress spinner
             let spinner = create_spinner("Starting favicon generation");
+            
+            // Show warning for raster images if proceeding
+            if !is_svg && raster_ok {
+                spinner.set_message(format!("{} Raster image quality may be poor at larger sizes", "Warning:".yellow().bold()));
+                std::thread::sleep(std::time::Duration::from_millis(1500)); // Show warning briefly
+            }
             
             // Convert CLI SizeLevel to internal IconPriority
             let priority = match coverage {
@@ -36,7 +50,7 @@ fn main() -> Result<()> {
             spinner.set_message(format!("{} {}", "Processing source file:".cyan().bold(), source.yellow()));
             
             // SVG support: detect extension
-            if source.ends_with(".svg") {
+            if is_svg {
                 spinner.set_message(format!("{}", "Loading SVG file...".cyan().bold()));
                 let data = std::fs::read(&source)?;
                 
