@@ -40,11 +40,9 @@ jobs:
       # │ 2. SET UP TOOLCHAIN                                                │
       # └────────────────────────────────────────────────────────────────────┘
       - name: Install Rust (stable)
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
-          target: ${{ matrix.target }}
-          profile: minimal
+          targets: ${{ matrix.target }}
 
       # ┌────────────────────────────────────────────────────────────────────┐
       # │ 3. BUILD BINARY                                                    │
@@ -58,11 +56,18 @@ jobs:
       - name: Create distribution folder
         run: mkdir -p dist
 
-      - name: Copy and rename binary
+      - name: Copy and rename binary (Linux/macOS)
+        if: runner.os != 'Windows'
         run: |
           cp \
             target/${{ matrix.target }}/release/favis${{ matrix.ext }} \
             dist/favis-${{ matrix.target }}${{ matrix.ext }}
+
+      - name: Copy and rename binary (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Copy-Item -Path "target\${{ matrix.target }}\release\favis${{ matrix.ext }}" -Destination "dist\favis-${{ matrix.target }}${{ matrix.ext }}"
 
       # ┌────────────────────────────────────────────────────────────────────┐
       # │ 5. GENERATE CHECKSUM                                               │
