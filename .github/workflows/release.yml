@@ -1,0 +1,89 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-publish:
+    name: Build & Publish Release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          # Linux build
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            ext: ""
+          # Windows build
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            ext: ".exe"
+          # macOS build
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            ext: ""
+
+    steps:
+
+      # ┌────────────────────────────────────────────────────────────────────┐
+      # │ 1. PREPARE SOURCE                                                   │
+      # └────────────────────────────────────────────────────────────────────┘
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ┌────────────────────────────────────────────────────────────────────┐
+      # │ 2. SET UP TOOLCHAIN                                                │
+      # └────────────────────────────────────────────────────────────────────┘
+      - name: Install Rust (stable)
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
+          profile: minimal
+
+      # ┌────────────────────────────────────────────────────────────────────┐
+      # │ 3. BUILD BINARY                                                    │
+      # └────────────────────────────────────────────────────────────────────┘
+      - name: Build release binary
+        run: cargo build --release --target ${{ matrix.target }}
+
+      # ┌────────────────────────────────────────────────────────────────────┐
+      # │ 4. PREPARE DISTRIBUTABLE                                           │
+      # └────────────────────────────────────────────────────────────────────┘
+      - name: Create distribution folder
+        run: mkdir -p dist
+
+      - name: Copy and rename binary
+        run: |
+          cp \
+            target/${{ matrix.target }}/release/favis${{ matrix.ext }} \
+            dist/favis-${{ matrix.target }}${{ matrix.ext }}
+
+      # ┌────────────────────────────────────────────────────────────────────┐
+      # │ 5. GENERATE CHECKSUM                                               │
+      # └────────────────────────────────────────────────────────────────────┘
+      - name: Generate SHA256 checksum
+        working-directory: dist
+        run: |
+          sha256sum favis-${{ matrix.target }}${{ matrix.ext }} \
+            > favis-${{ matrix.target }}${{ matrix.ext }}.sha256
+
+      # ┌────────────────────────────────────────────────────────────────────┐
+      # │ 6. CREATE & UPLOAD RELEASE                                         │
+      # └────────────────────────────────────────────────────────────────────┘
+      - name: Publish GitHub Release & Upload Assets
+        uses: softprops/action-gh-release@v2
+        if: github.ref_type == 'tag'
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          name: Release ${{ github.ref_name }}
+          files: |
+            dist/favis-${{ matrix.target }}${{ matrix.ext }}
+            dist/favis-${{ matrix.target }}${{ matrix.ext }}.sha256
+          generate_release_notes: true
+          fail_on_unmatched_files: true
