@@ -1,17 +1,22 @@
 //! SVG rendering to PNG using resvg.
 
 use anyhow::Result;
-use resvg::usvg::{self, Tree};
-use resvg::tiny_skia::Pixmap;
 use indicatif::ProgressBar;
 use owo_colors::OwoColorize;
+use resvg::tiny_skia::Pixmap;
+use resvg::usvg::{self, Tree};
 
 /// Render SVG data to a pixmap at the specified size.
-pub fn render_svg(svg_data: &[u8], width: u32, height: u32, progress: Option<&ProgressBar>) -> Result<Pixmap> {
+pub fn render_svg(
+    svg_data: &[u8],
+    width: u32,
+    height: u32,
+    progress: Option<&ProgressBar>,
+) -> Result<Pixmap> {
     if let Some(pb) = progress {
         pb.set_message(format!("{}", "Parsing SVG data...".cyan().bold()));
     }
-    
+
     let opt = usvg::Options::default();
     let tree = Tree::from_data(svg_data, &opt)?;
 
@@ -24,14 +29,18 @@ pub fn render_svg(svg_data: &[u8], width: u32, height: u32, progress: Option<&Pr
             "pixels...".cyan().bold()
         ));
     }
-    
-    let mut pixmap = Pixmap::new(width, height)
-        .ok_or_else(|| anyhow::anyhow!("Failed to create pixmap"))?;
+
+    let mut pixmap =
+        Pixmap::new(width, height).ok_or_else(|| anyhow::anyhow!("Failed to create pixmap"))?;
 
     resvg::render(&tree, usvg::Transform::default(), &mut pixmap.as_mut());
-    
+
     if let Some(pb) = progress {
-        pb.set_message(format!("{} {}", "SVG rendering".cyan().bold(), "complete".green().bold()));
+        pb.set_message(format!(
+            "{} {}",
+            "SVG rendering".cyan().bold(),
+            "complete".green().bold()
+        ));
     }
 
     Ok(pixmap)
@@ -41,7 +50,7 @@ pub fn render_svg(svg_data: &[u8], width: u32, height: u32, progress: Option<&Pr
 pub fn get_svg_dimensions(svg_data: &[u8]) -> Result<(u32, u32)> {
     let opt = usvg::Options::default();
     let tree = Tree::from_data(svg_data, &opt)?;
-    
+
     let size = tree.size();
     Ok((size.width() as u32, size.height() as u32))
 }
@@ -63,11 +72,11 @@ impl PixmapExt for Pixmap {
         let width = self.width();
         let height = self.height();
         let data = self.data();
-        
+
         // Create an RgbaImage from the pixmap data
         let img = image::RgbaImage::from_raw(width, height, data.to_vec())
             .ok_or_else(|| anyhow::anyhow!("Failed to create image from pixmap data"))?;
-            
+
         Ok(image::DynamicImage::ImageRgba8(img))
     }
 }

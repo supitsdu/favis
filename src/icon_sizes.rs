@@ -68,7 +68,6 @@ pub fn get_all_sizes() -> Vec<IconSize> {
             priority: IconPriority::Required,
             description: "Android homescreen icon",
         },
-
         // Priority 2: Recommended sizes
         IconSize {
             size: 48,
@@ -112,7 +111,6 @@ pub fn get_all_sizes() -> Vec<IconSize> {
             priority: IconPriority::Recommended,
             description: "PWA splash screen icon",
         },
-
         // Priority 3: Extended sizes
         IconSize {
             size: 57,
@@ -185,8 +183,7 @@ pub fn get_ico_sizes(priority: IconPriority) -> Vec<u32> {
     filter_by_priority(priority)
         .into_iter()
         .filter(|size| {
-            size.purposes.contains(&IconPurpose::Favicon)
-                && size.size <= 256 // ICO format supports up to 256x256
+            size.purposes.contains(&IconPurpose::Favicon) && size.size <= 256 // ICO format supports up to 256x256
         })
         .map(|size| size.size)
         .collect()

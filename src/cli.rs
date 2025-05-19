@@ -28,7 +28,7 @@ Tips:
 ",
     author,
     version,
-    arg_required_else_help = true,
+    arg_required_else_help = true
 )]
 pub struct Cli {
     #[command(subcommand)]
@@ -73,7 +73,7 @@ Examples:
         /// Path to the source image file (SVG preferred)
         #[arg(
             help = "Source image file (SVG strongly recommended for quality)",
-            value_name = "SOURCE",
+            value_name = "SOURCE"
         )]
         source: String,
 
@@ -84,16 +84,12 @@ Examples:
             value_enum,
             default_value = "recommended",
             help = "Icon size coverage level (affects number of icons generated)",
-            value_name = "COVERAGE",
+            value_name = "COVERAGE"
         )]
         coverage: SizeLevel,
 
         /// Also generate a web manifest file
-        #[arg(
-            short,
-            long,
-            help = "Generate a manifest.webmanifest file for PWAs",
-        )]
+        #[arg(short, long, help = "Generate a manifest.webmanifest file for PWAs")]
         manifest: bool,
 
         /// Output directory for generated files
@@ -102,18 +98,18 @@ Examples:
             long,
             default_value = ".",
             help = "Directory where generated files will be saved",
-            value_name = "DIR",
+            value_name = "DIR"
         )]
         output: String,
-        
+
         /// Allow raster source images (PNG/JPG) despite quality concerns
         #[arg(
             long,
-            help = "Allow raster sources (PNG/JPG) despite quality concerns at large sizes",
+            help = "Allow raster sources (PNG/JPG) despite quality concerns at large sizes"
         )]
         raster_ok: bool,
     },
-    
+
     /// Generate HTML <link> tags from a webmanifest file
     #[command(
         about = "Generate HTML <link> tags from a manifest.webmanifest",
@@ -140,24 +136,24 @@ Examples:
         /// Path to the manifest.webmanifest file
         #[arg(
             help = "Path to existing manifest.webmanifest file to read",
-            value_name = "MANIFEST",
+            value_name = "MANIFEST"
         )]
         manifest: String,
-        
+
         /// Base URL path to prefix for all icon links
         #[arg(
             long,
             help = "Base URL to prefix for all icon paths (e.g., /assets or https://cdn.example.com)",
-            value_name = "URL",
+            value_name = "URL"
         )]
         base: Option<String>,
-        
+
         /// Output HTML file path (default: print to stdout)
         #[arg(
             short,
             long,
             help = "Save HTML to file instead of printing to stdout",
-            value_name = "FILE",
+            value_name = "FILE"
         )]
         output: Option<String>,
     },

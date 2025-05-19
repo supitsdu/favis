@@ -1,8 +1,8 @@
 //! Progress reporting utilities using indicatif.
 
 use indicatif::{ProgressBar, ProgressStyle};
-use std::time::Duration;
 use owo_colors::OwoColorize;
+use std::time::Duration;
 
 /// Creates a styled progress bar for a specific task
 pub fn create_spinner(msg: &str) -> ProgressBar {

@@ -2,12 +2,15 @@
 
 //! Generate HTML <link> tags or JSON metadata from a webmanifest
 
-use anyhow::{Context, Result};
 use crate::icon_sizes::{get_all_sizes, IconPurpose};
+use anyhow::{Context, Result};
 use indicatif::ProgressBar;
 use owo_colors::OwoColorize;
 use serde::Deserialize;
-use std::{fs::{self, File}, io::Write};
+use std::{
+    fs::{self, File},
+    io::Write,
+};
 
 /// Minimal representation of the 'icons' array in webmanifest
 #[derive(Debug, Deserialize)]
@@ -50,15 +53,12 @@ impl LinkTag {
 }
 
 /// Reads a manifest, builds link tags, and returns HTML snippet
-pub fn generate_links_from_manifest(
-    manifest_path: &str,
-    base_url: Option<&str>,
-) -> Result<String> {
+pub fn generate_links_from_manifest(manifest_path: &str, base_url: Option<&str>) -> Result<String> {
     // Read and parse manifest file
     let raw = fs::read_to_string(manifest_path)
         .with_context(|| format!("Failed to read manifest `{}`", manifest_path))?;
-    let manifest: Manifest = serde_json::from_str(&raw)
-        .context("Invalid JSON in manifest.webmanifest")?;
+    let manifest: Manifest =
+        serde_json::from_str(&raw).context("Invalid JSON in manifest.webmanifest")?;
 
     // Load all known icon sizes and build a lookup by size string
     let known_sizes = get_all_sizes();
@@ -75,7 +75,11 @@ pub fn generate_links_from_manifest(
     for icon in manifest.icons {
         // Build href with optional base
         let href = if let Some(base) = base_url {
-            format!("{}/{}", base.trim_end_matches('/'), icon.src.trim_start_matches('/'))
+            format!(
+                "{}/{}",
+                base.trim_end_matches('/'),
+                icon.src.trim_start_matches('/')
+            )
         } else {
             icon.src.clone()
         };
@@ -107,7 +111,12 @@ pub fn generate_links_from_manifest(
         // Dedup
         let key = (rel, sizes.clone());
         if seen.insert(key) {
-            tags.push(LinkTag { rel, href, sizes, type_attr });
+            tags.push(LinkTag {
+                rel,
+                href,
+                sizes,
+                type_attr,
+            });
         }
     }
 
@@ -116,9 +125,16 @@ pub fn generate_links_from_manifest(
     const REL_PRIORITY: &[&str] = &["shortcut icon", "icon", "apple-touch-icon"];
     tags.sort_by(|a, b| {
         // Compare rel priority
-        let a_rel = REL_PRIORITY.iter().position(|&r| r == a.rel).unwrap_or(usize::MAX);
-        let b_rel = REL_PRIORITY.iter().position(|&r| r == b.rel).unwrap_or(usize::MAX);
-        a_rel.cmp(&b_rel)
+        let a_rel = REL_PRIORITY
+            .iter()
+            .position(|&r| r == a.rel)
+            .unwrap_or(usize::MAX);
+        let b_rel = REL_PRIORITY
+            .iter()
+            .position(|&r| r == b.rel)
+            .unwrap_or(usize::MAX);
+        a_rel
+            .cmp(&b_rel)
             // If rel is equal, compare numeric size parsed from "NxN"
             .then_with(|| {
                 let parse_size = |s: &Option<String>| {
@@ -157,12 +173,19 @@ pub fn generate_links(
 
     if let Some(path) = output_path {
         if let Some(pb) = progress {
-            pb.set_message(format!("{} {}", "Writing HTML to".cyan().bold(), path.yellow()));
+            pb.set_message(format!(
+                "{} {}",
+                "Writing HTML to".cyan().bold(),
+                path.yellow()
+            ));
         }
         let mut file = File::create(path)?;
         file.write_all(html.as_bytes())?;
         if let Some(pb) = progress {
-            pb.set_message(format!("{}", "HTML link tags written successfully.".green().bold()));
+            pb.set_message(format!(
+                "{}",
+                "HTML link tags written successfully.".green().bold()
+            ));
         }
     } else {
         // Print to stdout if no output file specified
