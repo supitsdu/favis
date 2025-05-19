@@ -3,16 +3,36 @@
 use anyhow::Result;
 use resvg::usvg::{self, Tree};
 use resvg::tiny_skia::Pixmap;
+use indicatif::ProgressBar;
+use owo_colors::OwoColorize;
 
 /// Render SVG data to a pixmap at the specified size.
-pub fn render_svg(svg_data: &[u8], width: u32, height: u32) -> Result<Pixmap> {
+pub fn render_svg(svg_data: &[u8], width: u32, height: u32, progress: Option<&ProgressBar>) -> Result<Pixmap> {
+    if let Some(pb) = progress {
+        pb.set_message(format!("{}", "Parsing SVG data...".cyan().bold()));
+    }
+    
     let opt = usvg::Options::default();
     let tree = Tree::from_data(svg_data, &opt)?;
 
+    if let Some(pb) = progress {
+        pb.set_message(format!(
+            "{} {}x{} {}",
+            "Rendering SVG to".cyan().bold(),
+            width.to_string().yellow(),
+            height.to_string().yellow(),
+            "pixels...".cyan().bold()
+        ));
+    }
+    
     let mut pixmap = Pixmap::new(width, height)
         .ok_or_else(|| anyhow::anyhow!("Failed to create pixmap"))?;
 
     resvg::render(&tree, usvg::Transform::default(), &mut pixmap.as_mut());
+    
+    if let Some(pb) = progress {
+        pb.set_message(format!("{} {}", "SVG rendering".cyan().bold(), "complete".green().bold()));
+    }
 
     Ok(pixmap)
 }
@@ -27,9 +47,9 @@ pub fn get_svg_dimensions(svg_data: &[u8]) -> Result<(u32, u32)> {
 }
 
 /// Render SVG data to a pixmap at its original size.
-pub fn render_svg_original_size(svg_data: &[u8]) -> Result<Pixmap> {
+pub fn render_svg_original_size(svg_data: &[u8], progress: Option<&ProgressBar>) -> Result<Pixmap> {
     let (width, height) = get_svg_dimensions(svg_data)?;
-    render_svg(svg_data, width, height)
+    render_svg(svg_data, width, height, progress)
 }
 
 /// Extension trait for Pixmap operations

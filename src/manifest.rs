@@ -1,6 +1,8 @@
 //! Web manifest generator for PWA icons.
 
 use anyhow::Result;
+use indicatif::ProgressBar;
+use owo_colors::OwoColorize;
 use serde::Serialize;
 use std::{fs, path::Path};
 
@@ -26,7 +28,11 @@ struct Manifest {
 }
 
 /// Generates a `manifest.webmanifest` in `out_dir` using provided PNG sizes.
-pub fn generate_manifest(out_dir: &str, sizes: &[u32]) -> Result<()> {
+pub fn generate_manifest(out_dir: &str, sizes: &[u32], progress: Option<&ProgressBar>) -> Result<()> {
+    if let Some(pb) = progress {
+        pb.set_message(format!("{}", "Creating web manifest...".cyan().bold()));
+    }
+    
     let icons: Vec<ManifestIcon> = sizes
         .iter()
         .map(|&s| ManifestIcon {
@@ -46,8 +52,13 @@ pub fn generate_manifest(out_dir: &str, sizes: &[u32]) -> Result<()> {
         background_color: "#ffffff".into(),
     };
 
+    if let Some(pb) = progress {
+        pb.set_message(format!("{}", "Writing manifest.webmanifest...".cyan().bold()));
+    }
+    
     let json = serde_json::to_string_pretty(&manifest)?;
     let path = Path::new(out_dir).join("manifest.webmanifest");
     fs::write(path, json)?;
+    
     Ok(())
 }

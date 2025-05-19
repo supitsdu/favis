@@ -2,40 +2,53 @@
 
 use anyhow::Result;
 use clap::{Parser, CommandFactory};
+use owo_colors::OwoColorize;
 
 mod cli;
 mod img;
 mod svg;
 mod manifest;
+mod progress;
 
 use cli::{Cli, Commands};
 use crate::svg::PixmapExt;
+use crate::progress::create_spinner;
+mod icon_sizes;
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
     match cli.command {
         Some(Commands::Generate { source, size_range, only_ati, manifest: gen_manifest, output }) => {
+            // Setup progress spinner
+            let spinner = create_spinner("Starting favicon generation");
+            
             // Parse size range (we don't actually use this currently, but keeping for future use)
             let _sizes: Vec<u32> = size_range
                 .split('-')
                 .filter_map(|s| s.parse().ok())
                 .collect();
 
-            let png_sizes = if only_ati {
-                vec![48, 72, 96, 128, 192, 256, 384, 512]
-            } else {
-                vec![16, 32, 48, 72, 96, 128, 256, 384, 512]
-            };
-            let ico_sizes = vec![16, 32, 48, 64, 96, 128, 256];
 
+            let png_sizes: Vec<u32> = if only_ati {
+                icon_sizes::PNG_SIZES_ATI.to_vec()
+            } else {
+                icon_sizes::PNG_SIZES_ALL.to_vec()
+            };
+            let ico_sizes: Vec<u32> = icon_sizes::ICO_SIZES.to_vec();
+
+            spinner.set_message(format!("{} {}", "Processing source file:".cyan().bold(), source.yellow()));
+            
             // SVG support: detect extension
             if source.ends_with(".svg") {
+                spinner.set_message(format!("{}", "Loading SVG file...".cyan().bold()));
                 let data = std::fs::read(&source)?;
                 
                 // First render the SVG at its original size
-                let pixmap = svg::render_svg_original_size(&data)?;
+                spinner.set_message(format!("{}", "Rendering SVG to bitmap...".cyan().bold()));
+                let pixmap = svg::render_svg_original_size(&data, Some(&spinner))?;
                 
                 // Convert the Pixmap to a DynamicImage
+                spinner.set_message(format!("{}", "Converting to image format...".cyan().bold()));
                 let original_image = pixmap.to_dynamic_image()?;
                 
                 // Create a temporary file path for the original-sized PNG
@@ -44,22 +57,38 @@ fn main() -> Result<()> {
                 let temp_path = temp_file.to_string_lossy();
                 
                 // Save the original image to the temp file
+                spinner.set_message(format!("{}", "Saving temporary PNG file...".cyan().bold()));
                 original_image.save(&temp_file)?;
                 
                 // Now process it like a regular PNG
-                img::process(&temp_path, &output, &png_sizes, &ico_sizes)?;
+                img::process(
+                    &temp_path, 
+                    &output, 
+                    &png_sizes, 
+                    &ico_sizes, 
+                    Some(&spinner)
+                )?;
                 
                 // Clean up the temporary file
+                spinner.set_message(format!("{}", "Cleaning up temporary files...".cyan().bold()));
                 if temp_file.exists() {
                     std::fs::remove_file(temp_file)?;
                 }
             } else {
-                img::process(&source, &output, &png_sizes, &ico_sizes)?;
+                img::process(
+                    &source, 
+                    &output, 
+                    &png_sizes, 
+                    &ico_sizes, 
+                    Some(&spinner)
+                )?;
             }
 
             if gen_manifest {
-                manifest::generate_manifest(&output, &png_sizes)?;
+                manifest::generate_manifest(&output, &png_sizes, Some(&spinner))?;
             }
+            
+            spinner.finish_with_message(format!("{} {}", "✓".green().bold(), "All favicon assets generated successfully!".green().bold()));
         }
         None => {
             // If no subcommand, print help and exit
@@ -69,4 +98,3 @@ fn main() -> Result<()> {
     }
     Ok(())
 }
-
