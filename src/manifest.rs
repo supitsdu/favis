@@ -3,10 +3,10 @@
 use anyhow::Result;
 use indicatif::ProgressBar;
 use owo_colors::OwoColorize;
-use serde::{Serialize, Deserialize};
-use std::{fs, path::Path, collections::HashMap};
+use serde::{Deserialize, Serialize};
+use std::{collections::HashMap, fs, path::Path};
 
-use crate::icon_sizes::{IconPriority, IconPurpose, filter_by_priority};
+use crate::icon_sizes::{filter_by_priority, IconPriority};
 
 /// Icon entry in the webmanifest
 #[derive(Serialize, Deserialize)]
@@ -15,8 +15,6 @@ struct ManifestIcon {
     sizes: String,
     #[serde(rename = "type")]
     mime_type: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    purpose: Option<String>,
 }
 
 /// Simplified webmanifest structure
@@ -40,15 +38,6 @@ struct Manifest {
     additional_fields: HashMap<String, serde_json::Value>,
 }
 
-/// Map our internal purpose to PWA manifest purpose
-fn map_purpose_to_manifest(purpose: &IconPurpose) -> Option<&'static str> {
-    match purpose {
-        IconPurpose::PWA => Some("any"),
-        IconPurpose::Android => Some("maskable"),
-        _ => None
-    }
-}
-
 /// Try to read an existing manifest file
 fn read_existing_manifest(path: &Path) -> Result<Option<Manifest>> {
     if path.exists() {
@@ -61,34 +50,30 @@ fn read_existing_manifest(path: &Path) -> Result<Option<Manifest>> {
 }
 
 /// Generates or updates a `manifest.webmanifest` in `out_dir` using provided priority level.
-pub fn generate_manifest(out_dir: &str, priority: IconPriority, progress: Option<&ProgressBar>) -> Result<()> {
+pub fn generate_manifest(
+    out_dir: &str,
+    priority: IconPriority,
+    progress: Option<&ProgressBar>,
+) -> Result<()> {
     if let Some(pb) = progress {
         pb.set_message(format!("{}", "Creating web manifest...".cyan().bold()));
     }
-    
+
     // Get all icon sizes for the requested priority level
     let icon_sizes = filter_by_priority(priority);
-    
-    // Create manifest icons with proper purpose values
+
+    // Create manifest icons with standardized format (no purpose field)
     let icons: Vec<ManifestIcon> = icon_sizes
         .iter()
-        .map(|size| {
-            // Find the primary purpose for the manifest
-            let purpose = size.purposes.iter()
-                .find_map(map_purpose_to_manifest)
-                .map(String::from);
-                
-            ManifestIcon {
-                src: format!("favicon-{}x{}.png", size.size, size.size),
-                sizes: format!("{}x{}", size.size, size.size),
-                mime_type: "image/png".into(),
-                purpose,
-            }
+        .map(|size| ManifestIcon {
+            src: format!("favicon-{}x{}.png", size.size, size.size),
+            sizes: format!("{}x{}", size.size, size.size),
+            mime_type: "image/png".into(),
         })
         .collect();
 
     let path = Path::new(out_dir).join("manifest.webmanifest");
-    
+
     // Try to read existing manifest
     let mut manifest = match read_existing_manifest(&path)? {
         Some(existing) => {
@@ -96,10 +81,13 @@ pub fn generate_manifest(out_dir: &str, priority: IconPriority, progress: Option
                 pb.set_message(format!("{}", "Updating existing manifest...".cyan().bold()));
             }
             existing
-        },
+        }
         None => {
             if let Some(pb) = progress {
-                pb.set_message(format!("{}", "Creating new minimal manifest...".cyan().bold()));
+                pb.set_message(format!(
+                    "{}",
+                    "Creating new minimal manifest...".cyan().bold()
+                ));
             }
             Manifest {
                 name: None,
@@ -113,16 +101,19 @@ pub fn generate_manifest(out_dir: &str, priority: IconPriority, progress: Option
             }
         }
     };
-    
+
     // Update only the icons field
     manifest.icons = icons;
 
     if let Some(pb) = progress {
-        pb.set_message(format!("{}", "Writing manifest.webmanifest...".cyan().bold()));
+        pb.set_message(format!(
+            "{}",
+            "Writing manifest.webmanifest...".cyan().bold()
+        ));
     }
-    
+
     let json = serde_json::to_string_pretty(&manifest)?;
     fs::write(path, json)?;
-    
+
     Ok(())
 }
