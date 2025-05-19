@@ -67,11 +67,23 @@ jobs:
       # ┌────────────────────────────────────────────────────────────────────┐
       # │ 5. GENERATE CHECKSUM                                               │
       # └────────────────────────────────────────────────────────────────────┘
-      - name: Generate SHA256 checksum
+      - name: Generate SHA256 checksum (Linux)
+        if: runner.os == 'Linux'
         working-directory: dist
+        run: sha256sum favis-${{ matrix.target }}${{ matrix.ext }} > favis-${{ matrix.target }}${{ matrix.ext }}.sha256
+
+      - name: Generate SHA256 checksum (macOS)
+        if: runner.os == 'macOS'
+        working-directory: dist
+        run: shasum -a 256 favis-${{ matrix.target }}${{ matrix.ext }} > favis-${{ matrix.target }}${{ matrix.ext }}.sha256
+
+      - name: Generate SHA256 checksum (Windows)
+        if: runner.os == 'Windows'
+        working-directory: dist
+        shell: powershell
         run: |
-          sha256sum favis-${{ matrix.target }}${{ matrix.ext }} \
-            > favis-${{ matrix.target }}${{ matrix.ext }}.sha256
+          $hash = (Get-FileHash -Algorithm SHA256 favis-${{ matrix.target }}${{ matrix.ext }}).Hash.ToLower()
+          $hash + " *favis-${{ matrix.target }}${{ matrix.ext }}" | Out-File -Encoding utf8 favis-${{ matrix.target }}${{ matrix.ext }}.sha256
 
       # ┌────────────────────────────────────────────────────────────────────┐
       # │ 6. CREATE & UPLOAD RELEASE                                         │
