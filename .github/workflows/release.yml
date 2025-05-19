@@ -95,9 +95,14 @@ jobs:
       # └────────────────────────────────────────────────────────────────────┘
       - name: Publish GitHub Release & Upload Assets
         uses: softprops/action-gh-release@v2
+        # Note: Using GITHUB_TOKEN won't trigger workflows that run on the 'release' event
+        # If you need to trigger other workflows on release, use a personal access token instead
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # Using inputs parameter syntax instead of environment variables (preferred method)
+          token: ${{ secrets.CI_TOKEN }}
           name: Release ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          make_latest: true
           files: |
             dist/favis-${{ matrix.target }}${{ matrix.ext }}
             dist/favis-${{ matrix.target }}${{ matrix.ext }}.sha256
