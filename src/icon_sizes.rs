@@ -36,6 +36,7 @@ pub struct IconSize {
     /// Priority level (1-3)
     pub priority: IconPriority,
     /// Human-readable description of where this icon is used
+    #[allow(dead_code)]
     pub description: &'static str,
 }
 
@@ -186,6 +187,7 @@ pub fn get_ico_sizes(priority: IconPriority) -> Vec<u32> {
 }
 
 /// Filter sizes by purpose.
+#[allow(dead_code)]
 pub fn filter_by_purpose(purpose: IconPurpose, priority: IconPriority) -> Vec<IconSize> {
     filter_by_priority(priority)
         .into_iter()
