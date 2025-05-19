@@ -95,7 +95,6 @@ jobs:
       # └────────────────────────────────────────────────────────────────────┘
       - name: Publish GitHub Release & Upload Assets
         uses: softprops/action-gh-release@v2
-        if: github.ref_type == 'tag'
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           name: Release ${{ github.ref_name }}
