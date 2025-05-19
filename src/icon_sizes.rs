@@ -60,7 +60,7 @@ pub fn get_all_sizes() -> Vec<IconSize> {
             size: 180,
             purposes: vec![IconPurpose::AppleTouch],
             priority: IconPriority::Required,
-            description: "Apple Touch Icon for iOS devices",
+            description: "Apple Touch Icon for iPhone (retina display)",
         },
         IconSize {
             size: 192,
@@ -77,16 +77,22 @@ pub fn get_all_sizes() -> Vec<IconSize> {
             description: "Windows site icon",
         },
         IconSize {
-            size: 57,
+            size: 76,
             purposes: vec![IconPurpose::AppleTouch],
             priority: IconPriority::Recommended,
-            description: "Apple Touch Icon (older iPhones)",
+            description: "Apple Touch Icon for iPad (non-retina)",
         },
         IconSize {
-            size: 72,
+            size: 120,
             purposes: vec![IconPurpose::AppleTouch],
             priority: IconPriority::Recommended,
-            description: "Apple Touch Icon (older iPads)",
+            description: "Apple Touch Icon for iPhone (X/Plus)",
+        },
+        IconSize {
+            size: 152,
+            purposes: vec![IconPurpose::AppleTouch],
+            priority: IconPriority::Recommended,
+            description: "Apple Touch Icon for iPad, iPad mini",
         },
         IconSize {
             size: 96,
@@ -109,34 +115,34 @@ pub fn get_all_sizes() -> Vec<IconSize> {
 
         // Priority 3: Extended sizes
         IconSize {
-            size: 64,
-            purposes: vec![IconPurpose::Favicon],
+            size: 57,
+            purposes: vec![IconPurpose::AppleTouch],
             priority: IconPriority::Extended,
-            description: "Windows site icon (medium)",
+            description: "Apple Touch Icon (older iPhone, pre-retina)",
+        },
+        IconSize {
+            size: 72,
+            purposes: vec![IconPurpose::AppleTouch],
+            priority: IconPriority::Extended,
+            description: "Apple Touch Icon (older iPad, pre-retina)",
         },
         IconSize {
             size: 114,
             purposes: vec![IconPurpose::AppleTouch],
             priority: IconPriority::Extended,
-            description: "Apple Touch Icon (iPhone Retina)",
-        },
-        IconSize {
-            size: 120,
-            purposes: vec![IconPurpose::AppleTouch],
-            priority: IconPriority::Extended,
-            description: "Apple Touch Icon (iPhone Retina)",
+            description: "Apple Touch Icon (older iPhone, retina)",
         },
         IconSize {
             size: 144,
             purposes: vec![IconPurpose::AppleTouch],
             priority: IconPriority::Extended,
-            description: "Apple Touch Icon (iPad Retina)",
+            description: "Apple Touch Icon (older iPad, retina)",
         },
         IconSize {
-            size: 152,
-            purposes: vec![IconPurpose::AppleTouch],
+            size: 64,
+            purposes: vec![IconPurpose::Favicon],
             priority: IconPriority::Extended,
-            description: "Apple Touch Icon (iPad Retina)",
+            description: "Windows site icon (medium)",
         },
         IconSize {
             size: 256,

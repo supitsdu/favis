@@ -9,6 +9,7 @@ mod img;
 mod svg;
 mod manifest;
 mod progress;
+mod link; // Add new module
 
 use cli::{Cli, Commands, SizeLevel};
 use crate::svg::PixmapExt;
@@ -100,6 +101,13 @@ fn main() -> Result<()> {
             }
             
             spinner.finish_with_message(format!("{} {}", "✓".green().bold(), "All favicon assets generated successfully!".green().bold()));
+        }
+        Some(Commands::Link { manifest, base, output }) => {
+            // Create spinner for progress indication
+            let spinner = create_spinner("Generating HTML link tags");
+            
+            // Call the link generation function
+            link::generate_links(&manifest, base.as_deref(), output.as_deref(), Some(&spinner))?;
         }
         None => {
             // If no subcommand, print help and exit

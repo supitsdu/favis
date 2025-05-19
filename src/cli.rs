@@ -50,4 +50,19 @@ pub enum Commands {
         #[arg(long, help = "Allow raster source images (PNG/JPG) despite quality concerns")]
         raster_ok: bool,
     },
+    
+    /// Generate HTML link tags from a webmanifest file
+    Link {
+        /// Path to the manifest.webmanifest file
+        #[arg(help = "Path to the manifest.webmanifest file")]
+        manifest: String,
+        
+        /// Base URL path to prefix for all icon links
+        #[arg(long, help = "Base URL path to prefix for all icon links")]
+        base: Option<String>,
+        
+        /// Output HTML file path
+        #[arg(short, long, help = "Output HTML file path")]
+        output: Option<String>,
+    },
 }
