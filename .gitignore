@@ -1,0 +1,7 @@
+/target
+/assets
+/dist
+*.png
+*.jpg
+*.jpeg
+*.gif
