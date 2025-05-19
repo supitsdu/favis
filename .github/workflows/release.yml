@@ -2,19 +2,20 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'v*'           # e.g. v1.0.0, v2.1.3
     branches:
       - main
+    tags:
+      - 'v*'
 
 permissions:
-  contents: write     # allows creating releases + uploading assets
+  # Allow creating releases and uploading assets
+  contents: write
 
 jobs:
-  # ────────────────────────────────────────────────────────────────────────
-  # 1. CREATE RELEASE (runs only once)
-  # ────────────────────────────────────────────────────────────────────────
-  create_release:
+  # ───────────────────────────────────────────────────────────────────────────
+  # 1. Create the GitHub Release (runs once per tag push)
+  # ───────────────────────────────────────────────────────────────────────────
+  create:
     name: Create GitHub Release
     runs-on: ubuntu-latest
     steps:
@@ -27,17 +28,17 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name:    ${{ github.ref_name }}
-          release_name: Release ${{ github.ref_name }}
-          draft:       false
-          prerelease:  false
+          tag_name:     ${{ github.ref_name }}
+          release_name: ${{ github.ref_name }}
+          draft:        false
+          prerelease:   false
 
-  # ────────────────────────────────────────────────────────────────────────
-  # 2. BUILD & UPLOAD ASSETS (matrix)
-  # ────────────────────────────────────────────────────────────────────────
-  build_and_upload:
+  # ───────────────────────────────────────────────────────────────────────────
+  # 2. Build & Upload Assets (matrix)
+  # ───────────────────────────────────────────────────────────────────────────
+  build:
     name: Build & Upload Assets
-    needs: create_release
+    needs: create
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -70,37 +71,28 @@ jobs:
       - name: Copy & rename binary
         run: |
           if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            cp "target\\${{ matrix.target }}\\release\\mytool${{ matrix.ext }}" "dist/mytool-${{ matrix.target }}${{ matrix.ext }}"
+            cp "target\\${{ matrix.target }}\\release\\favis${{ matrix.ext }}" "dist/favis-${{ matrix.target }}${{ matrix.ext }}"
           else
-            cp target/${{ matrix.target }}/release/mytool${{ matrix.ext }} dist/mytool-${{ matrix.target }}${{ matrix.ext }}
+            cp target/${{ matrix.target }}/release/favis${{ matrix.ext }} dist/favis-${{ matrix.target }}${{ matrix.ext }}
           fi
 
       - name: Generate SHA256 checksum
         working-directory: dist
         shell: bash
-        run: |
-          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            powershell -Command "Get-FileHash -Algorithm SHA256 mytool-${{ matrix.target }}${{ matrix.ext }} | ForEach-Object { \"$($_.Hash) *mytool-${{ matrix.target }}${{ matrix.ext }}\" } | Out-File -Encoding utf8 mytool-${{ matrix.target }}${{ matrix.ext }}.sha256"
-          else
-            sha256sum mytool-${{ matrix.target }}${{ matrix.ext }} > mytool-${{ matrix.target }}${{ matrix.ext }}.sha256
-          fi
+        run: sha256sum favis-${{ matrix.target }}${{ matrix.ext }} > favis-${{ matrix.target }}${{ matrix.ext }}.sha256
 
       - name: Upload binary asset
         uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url:     ${{ needs.create.outputs.upload_url }}
-          asset_path:     dist/mytool-${{ matrix.target }}${{ matrix.ext }}
-          asset_name:     mytool-${{ matrix.target }}${{ matrix.ext }}
+          upload_url:        ${{ needs.create.outputs.upload_url }}
+          asset_path:        dist/favis-${{ matrix.target }}${{ matrix.ext }}
+          asset_name:        favis-${{ matrix.target }}${{ matrix.ext }}
           asset_content_type: application/octet-stream
 
       - name: Upload checksum asset
         uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url:     ${{ needs.create.outputs.upload_url }}
-          asset_path:     dist/mytool-${{ matrix.target }}${{ matrix.ext }}.sha256
-          asset_name:     mytool-${{ matrix.target }}${{ matrix.ext }}.sha256
+          upload_url:        ${{ needs.create.outputs.upload_url }}
+          asset_path:        dist/favis-${{ matrix.target }}${{ matrix.ext }}.sha256
+          asset_name:        favis-${{ matrix.target }}${{ matrix.ext }}.sha256
           asset_content_type: text/plain
