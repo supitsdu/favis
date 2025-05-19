@@ -2,6 +2,14 @@
 name = "favis"
 version = "0.1.0"
 edition = "2021"
+authors = ["E. M. Santos <contact@supitsdu.me"]
+license = "MIT"
+description = "Favicon and Web Icon Generator"
+homepage = "https://github.com/supitsdu/favis"
+repository = "https://github.com/supitsdu/favis"
+readme = "README.md"
+keywords = ["favicon", "cli", "rust"]
+categories = ["command-line-utilities"]
 
 [dependencies]
 anyhow = "1.0"
