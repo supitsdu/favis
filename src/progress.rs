@@ -14,6 +14,6 @@ pub fn create_spinner(msg: &str) -> ProgressBar {
             .unwrap(),
     );
     pb.set_message(format!("{}", msg.cyan().bold()));
-    pb.enable_steady_tick(Duration::from_millis(80));
+    pb.enable_steady_tick(Duration::from_millis(60));
     pb
 }

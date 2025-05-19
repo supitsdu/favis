@@ -16,10 +16,10 @@ Overview:
   - Can create HTML <link> tags from an existing manifest
 
 Usage:
-  favis generate logo.svg                       # Basic usage with default settings
-  favis generate logo.svg --manifest            # Also create a manifest.webmanifest
-  favis generate logo.svg --coverage extended   # Generate all possible icon sizes
-  favis link ./public/manifest.webmanifest      # Create HTML link tags from a manifest
+  > favis generate logo.svg
+  > favis generate logo.svg --manifest
+  > favis generate logo.svg --coverage extended
+  > favis link ./public/manifest.webmanifest
 
 Tips:
   - SVG sources are strongly recommended for best quality at all sizes
@@ -59,14 +59,9 @@ Output:
   - Optional manifest.webmanifest file for PWAs
 
 Examples:
-  # Basic usage with default settings
-  favis generate logo.svg
-  
-  # Generate all icon sizes and a manifest to the public directory
-  favis generate logo.svg --coverage extended --manifest --output ./public
-  
-  # Using a PNG source (not recommended, but supported)
-  favis generate logo.png --raster-ok
+  > favis generate logo.svg
+  > favis generate logo.svg --coverage extended --manifest --output ./public
+  > favis generate logo.png --raster-ok
 "
     )]
     Generate {
@@ -122,14 +117,9 @@ Purpose:
   - Organizes tags by importance and size
 
 Examples:
-  # Print link tags to stdout (default)
-  favis link ./public/manifest.webmanifest
-  
-  # Create a file with link tags, using a base URL prefix for all icons
-  favis link ./public/manifest.webmanifest --base /assets/icons --output ./public/favicon-links.html
-  
-  # Base URL is useful when icons are served from a different path than HTML
-  favis link ./manifest.webmanifest --base https://cdn.example.com/icons
+  > favis link ./public/manifest.webmanifest
+  > favis link ./public/manifest.webmanifest --base /assets/icons --output ./public/favicon-links.html
+  > favis link ./manifest.webmanifest --base https://cdn.example.com/icons
 "
     )]
     Link {

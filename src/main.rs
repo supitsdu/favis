@@ -9,7 +9,7 @@ mod img;
 mod link;
 mod manifest;
 mod progress;
-mod svg; // Add new module
+mod svg;
 
 use crate::progress::create_spinner;
 use crate::svg::PixmapExt;
