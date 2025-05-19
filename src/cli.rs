@@ -1,6 +1,6 @@
 //! CLI argument definitions for wfig
 
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 
 #[derive(Parser)]
 #[command(
@@ -16,6 +16,16 @@ pub struct Cli {
     pub command: Option<Commands>,
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq, ValueEnum)]
+pub enum SizeLevel {
+    /// Only required sizes (minimal set)
+    Required,
+    /// Recommended sizes (good compatibility)
+    Recommended,
+    /// All sizes (maximum compatibility)
+    Extended,
+}
+
 #[derive(Subcommand)]
 pub enum Commands {
     /// Generate icons and manifest from a source image
@@ -24,13 +34,9 @@ pub enum Commands {
         #[arg(short, long, help = "Path to the source image file (PNG, JPG, or SVG)")]
         source: String,
 
-        /// Size range for PNGs (e.g. "16-256")
-        #[arg(short = 'r', long, default_value = "16-256", help = "Size range for PNGs, e.g. 16-256")]
-        size_range: String,
-
-        /// Only generate Apple Touch Icons (recommended for iOS)
-        #[arg(long, help = "Only generate Apple Touch Icon sizes")]
-        only_ati: bool,
+        /// Icon size coverage level
+        #[arg(short, long, value_enum, default_value = "recommended", help = "Icon size coverage: required, recommended, or extended")]
+        coverage: SizeLevel,
 
         /// Also generate a webmanifest
         #[arg(short, long, help = "Also generate a web manifest file")]

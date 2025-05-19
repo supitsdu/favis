@@ -10,7 +10,7 @@ mod svg;
 mod manifest;
 mod progress;
 
-use cli::{Cli, Commands};
+use cli::{Cli, Commands, SizeLevel};
 use crate::svg::PixmapExt;
 use crate::progress::create_spinner;
 mod icon_sizes;
@@ -18,23 +18,20 @@ mod icon_sizes;
 fn main() -> Result<()> {
     let cli = Cli::parse();
     match cli.command {
-        Some(Commands::Generate { source, size_range, only_ati, manifest: gen_manifest, output }) => {
+        Some(Commands::Generate { source, coverage, manifest: gen_manifest, output }) => {
             // Setup progress spinner
             let spinner = create_spinner("Starting favicon generation");
             
-            // Parse size range (we don't actually use this currently, but keeping for future use)
-            let _sizes: Vec<u32> = size_range
-                .split('-')
-                .filter_map(|s| s.parse().ok())
-                .collect();
-
-
-            let png_sizes: Vec<u32> = if only_ati {
-                icon_sizes::PNG_SIZES_ATI.to_vec()
-            } else {
-                icon_sizes::PNG_SIZES_ALL.to_vec()
+            // Convert CLI SizeLevel to internal IconPriority
+            let priority = match coverage {
+                SizeLevel::Required => icon_sizes::IconPriority::Required,
+                SizeLevel::Recommended => icon_sizes::IconPriority::Recommended,
+                SizeLevel::Extended => icon_sizes::IconPriority::Extended,
             };
-            let ico_sizes: Vec<u32> = icon_sizes::ICO_SIZES.to_vec();
+            
+            // Get the appropriate sizes based on priority
+            let png_sizes = icon_sizes::get_png_sizes(priority);
+            let ico_sizes = icon_sizes::get_ico_sizes(priority);
 
             spinner.set_message(format!("{} {}", "Processing source file:".cyan().bold(), source.yellow()));
             
@@ -85,7 +82,7 @@ fn main() -> Result<()> {
             }
 
             if gen_manifest {
-                manifest::generate_manifest(&output, &png_sizes, Some(&spinner))?;
+                manifest::generate_manifest(&output, priority, Some(&spinner))?;
             }
             
             spinner.finish_with_message(format!("{} {}", "✓".green().bold(), "All favicon assets generated successfully!".green().bold()));
