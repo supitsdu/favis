@@ -99,7 +99,7 @@ jobs:
         # If you need to trigger other workflows on release, use a personal access token instead
         with:
           # Using inputs parameter syntax instead of environment variables (preferred method)
-          token: ${{ secrets.CI_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           name: Release ${{ github.ref_name }}
           tag_name: ${{ github.ref_name }}
           make_latest: true
