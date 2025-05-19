@@ -22,8 +22,8 @@ pub enum IconPurpose {
     Android,
     /// Windows Tiles/Icons
     Windows,
-    /// Generic PWA icon
-    PWA,
+    /// Generic Pwa icon
+    Pwa,
 }
 
 /// Icon size definition with metadata.
@@ -64,7 +64,7 @@ pub fn get_all_sizes() -> Vec<IconSize> {
         },
         IconSize {
             size: 192,
-            purposes: vec![IconPurpose::Android, IconPurpose::PWA],
+            purposes: vec![IconPurpose::Android, IconPurpose::Pwa],
             priority: IconPriority::Required,
             description: "Android homescreen icon",
         },
@@ -107,9 +107,9 @@ pub fn get_all_sizes() -> Vec<IconSize> {
         },
         IconSize {
             size: 512,
-            purposes: vec![IconPurpose::PWA],
+            purposes: vec![IconPurpose::Pwa],
             priority: IconPriority::Recommended,
-            description: "PWA splash screen icon",
+            description: "Pwa splash screen icon",
         },
         // Priority 3: Extended sizes
         IconSize {
@@ -150,9 +150,9 @@ pub fn get_all_sizes() -> Vec<IconSize> {
         },
         IconSize {
             size: 384,
-            purposes: vec![IconPurpose::PWA],
+            purposes: vec![IconPurpose::Pwa],
             priority: IconPriority::Extended,
-            description: "PWA icon (large)",
+            description: "Pwa icon (large)",
         },
     ]
 }

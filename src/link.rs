@@ -96,7 +96,7 @@ pub fn generate_links_from_manifest(manifest_path: &str, base_url: Option<&str>)
                     }
                 }
                 Some(purposes) if purposes.contains(&IconPurpose::Android) => "icon",
-                Some(purposes) if purposes.contains(&IconPurpose::PWA) => "icon",
+                Some(purposes) if purposes.contains(&IconPurpose::Pwa) => "icon",
                 _ => "icon",
             }
         } else if icon.src.to_lowercase().ends_with(".ico") {
