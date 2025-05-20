@@ -2,6 +2,7 @@ name: Release
 
 on:
   push:
+    # Only run on tag pushes like v1.2.3
     tags:
       - 'v*'
 
@@ -10,36 +11,10 @@ permissions:
 
 jobs:
   # ───────────────────────────────────────────────────────────────────────────
-  # 1. Setup & Cache Dependencies
-  # ───────────────────────────────────────────────────────────────────────────
-  setup:
-    name: Setup & Cache Dependencies
-    runs-on: ubuntu-latest
-    outputs:
-      cache-hit: ${{ steps.cache-deps.outputs.cache-hit }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Cache Rust registry
-        id: cache-deps
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: cargo-deps-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: cargo-deps-
-
-      - name: Install Rust toolchain
-        if: steps.cache-deps.outputs.cache-hit != 'true'
-        uses: dtolnay/rust-toolchain@stable
-
-  # ───────────────────────────────────────────────────────────────────────────
-  # 2. Build & Upload Artifacts
+  # 1. Build & Upload Artifacts (matrix)
   # ───────────────────────────────────────────────────────────────────────────
   build:
     name: Build Binaries & Upload Artifacts
-    needs: setup
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -55,16 +30,13 @@ jobs:
             ext: ".exe"
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Restore Rust cache
-        uses: actions/cache@v4
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: cargo-deps-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: cargo-deps-
+          targets: ${{ matrix.target }}
 
       - name: Build release binary
         run: cargo build --release --target ${{ matrix.target }}
@@ -81,20 +53,23 @@ jobs:
       - name: Copy binary (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: Copy-Item -Path "target\\${{ matrix.target }}\\release\\favis${{ matrix.ext }}" `
-                         -Destination "dist\\favis-${{ matrix.target }}${{ matrix.ext }}"
+        run: |
+          Copy-Item -Path "target\\${{ matrix.target }}\\release\\favis${{ matrix.ext }}" `
+                    -Destination "dist\\favis-${{ matrix.target }}${{ matrix.ext }}"
 
       - name: Generate SHA256 checksum (Linux)
         if: runner.os == 'Linux'
         working-directory: dist
-        run: sha256sum favis-${{ matrix.target }}${{ matrix.ext }} \
-                       > favis-${{ matrix.target }}${{ matrix.ext }}.sha256
+        run: |
+          sha256sum favis-${{ matrix.target }}${{ matrix.ext }} \
+            > favis-${{ matrix.target }}${{ matrix.ext }}.sha256
 
       - name: Generate SHA256 checksum (macOS)
         if: runner.os == 'macOS'
         working-directory: dist
-        run: shasum -a 256 favis-${{ matrix.target }}${{ matrix.ext }} \
-                     > favis-${{ matrix.target }}${{ matrix.ext }}.sha256
+        run: |
+          shasum -a 256 favis-${{ matrix.target }}${{ matrix.ext }} \
+            > favis-${{ matrix.target }}${{ matrix.ext }}.sha256
 
       - name: Generate SHA256 checksum (Windows)
         if: runner.os == 'Windows'
@@ -105,33 +80,36 @@ jobs:
           $hash = (Get-FileHash -Algorithm SHA256 $file).Hash.ToLower()
           "$hash *$file" | Out-File -Encoding utf8 "$file.sha256"
 
-      - name: Upload build artifacts
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: build-dist-${{ matrix.os }}
+          name: dist-${{ matrix.target }}
           path: dist/
 
   # ───────────────────────────────────────────────────────────────────────────
-  # 3. Publish Release & Assets
+  # 2. Publish Release & Upload Assets
   # ───────────────────────────────────────────────────────────────────────────
   publish:
     name: Publish Release & Upload Assets
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - name: Download Linux artifacts
+        uses: actions/download-artifact@v4
         with:
-          name: build-dist-ubuntu-latest
+          name: dist-x86_64-unknown-linux-gnu
           path: dist-linux
 
-      - uses: actions/download-artifact@v4
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4
         with:
-          name: build-dist-macos-latest
+          name: dist-x86_64-apple-darwin
           path: dist-macos
 
-      - uses: actions/download-artifact@v4
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
         with:
-          name: build-dist-windows-latest
+          name: dist-x86_64-pc-windows-msvc
           path: dist-windows
 
       - name: Publish Release & Upload Assets
