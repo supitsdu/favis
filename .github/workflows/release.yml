@@ -2,6 +2,7 @@ name: Release
 
 on:
   push:
+    # Only run on tags like v1.2.3
     tags:
       - 'v*'
 
@@ -15,6 +16,10 @@ jobs:
   create_release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
+    outputs:
+      # Expose the upload_url for downstream jobs
+      upload_url: ${{ steps.create.outputs.upload_url }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -107,15 +112,15 @@ jobs:
       - name: Upload binary asset
         uses: actions/upload-release-asset@v1
         with:
-          upload_url:        ${{ needs.create_release.outputs.upload_url }}
-          asset_path:        dist/favis-${{ matrix.target }}${{ matrix.ext }}
-          asset_name:        favis-${{ matrix.target }}${{ matrix.ext }}
+          upload_url:         ${{ needs.create_release.outputs.upload_url }}
+          asset_path:         dist/favis-${{ matrix.target }}${{ matrix.ext }}
+          asset_name:         favis-${{ matrix.target }}${{ matrix.ext }}
           asset_content_type: application/octet-stream
 
       - name: Upload checksum asset
         uses: actions/upload-release-asset@v1
         with:
-          upload_url:        ${{ needs.create_release.outputs.upload_url }}
-          asset_path:        dist/favis-${{ matrix.target }}${{ matrix.ext }}.sha256
-          asset_name:        favis-${{ matrix.target }}${{ matrix.ext }}.sha256
+          upload_url:         ${{ needs.create_release.outputs.upload_url }}
+          asset_path:         dist/favis-${{ matrix.target }}${{ matrix.ext }}.sha256
+          asset_name:         favis-${{ matrix.target }}${{ matrix.ext }}.sha256
           asset_content_type: text/plain
