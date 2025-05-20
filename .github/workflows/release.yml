@@ -2,7 +2,6 @@ name: Release
 
 on:
   push:
-    # Only run on tag pushes like v1.2.3
     tags:
       - 'v*'
 
@@ -10,8 +9,37 @@ permissions:
   contents: write
 
 jobs:
-  build-and-publish:
-    name: Build & Publish Release
+  # ───────────────────────────────────────────────────────────────────────────
+  # 1. Setup & Cache Dependencies
+  # ───────────────────────────────────────────────────────────────────────────
+  setup:
+    name: Setup & Cache Dependencies
+    runs-on: ubuntu-latest
+    outputs:
+      cache-hit: ${{ steps.cache-deps.outputs.cache-hit }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Rust registry
+        id: cache-deps
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: cargo-deps-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: cargo-deps-
+
+      - name: Install Rust toolchain
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        uses: dtolnay/rust-toolchain@stable
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # 2. Build & Upload Artifacts
+  # ───────────────────────────────────────────────────────────────────────────
+  build:
+    name: Build Binaries & Upload Artifacts
+    needs: setup
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -27,49 +55,46 @@ jobs:
             ext: ".exe"
 
     steps:
-      # 1. Checkout
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # 2. Rust toolchain
-      - name: Install Rust (stable)
-        uses: dtolnay/rust-toolchain@stable
+      - name: Restore Rust cache
+        uses: actions/cache@v4
         with:
-          targets: ${{ matrix.target }}
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: cargo-deps-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: cargo-deps-
 
-      # 3. Build
       - name: Build release binary
         run: cargo build --release --target ${{ matrix.target }}
 
-      # 4. Prepare dist/
       - name: Create dist directory
         run: mkdir -p dist
 
-      - name: Copy & rename binary (Linux/macOS)
+      - name: Copy binary (Linux/macOS)
         if: runner.os != 'Windows'
         run: |
           cp target/${{ matrix.target }}/release/favis${{ matrix.ext }} \
              dist/favis-${{ matrix.target }}${{ matrix.ext }}
 
-      - name: Copy & rename binary (Windows)
+      - name: Copy binary (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: |
-          Copy-Item -Path "target\${{ matrix.target }}\release\favis${{ matrix.ext }}" `
-                    -Destination "dist\favis-${{ matrix.target }}${{ matrix.ext }}"
+        run: Copy-Item -Path "target\\${{ matrix.target }}\\release\\favis${{ matrix.ext }}" `
+                         -Destination "dist\\favis-${{ matrix.target }}${{ matrix.ext }}"
 
-      # 5. Checksums
       - name: Generate SHA256 checksum (Linux)
         if: runner.os == 'Linux'
         working-directory: dist
         run: sha256sum favis-${{ matrix.target }}${{ matrix.ext }} \
-                      > favis-${{ matrix.target }}${{ matrix.ext }}.sha256
+                       > favis-${{ matrix.target }}${{ matrix.ext }}.sha256
 
       - name: Generate SHA256 checksum (macOS)
         if: runner.os == 'macOS'
         working-directory: dist
         run: shasum -a 256 favis-${{ matrix.target }}${{ matrix.ext }} \
-                      > favis-${{ matrix.target }}${{ matrix.ext }}.sha256
+                     > favis-${{ matrix.target }}${{ matrix.ext }}.sha256
 
       - name: Generate SHA256 checksum (Windows)
         if: runner.os == 'Windows'
@@ -80,17 +105,45 @@ jobs:
           $hash = (Get-FileHash -Algorithm SHA256 $file).Hash.ToLower()
           "$hash *$file" | Out-File -Encoding utf8 "$file.sha256"
 
-      # 6. Create or Update Release & Upload
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-dist-${{ matrix.os }}
+          path: dist/
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # 3. Publish Release & Assets
+  # ───────────────────────────────────────────────────────────────────────────
+  publish:
+    name: Publish Release & Upload Assets
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: build-dist-ubuntu-latest
+          path: dist-linux
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: build-dist-macos-latest
+          path: dist-macos
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: build-dist-windows-latest
+          path: dist-windows
+
       - name: Publish Release & Upload Assets
         uses: softprops/action-gh-release@v2
         with:
-          # token supports create or update of existing release
-          token:        ${{ secrets.GITHUB_TOKEN }}
-          tag_name:     ${{ github.ref_name }}
-          name:         ${{ github.ref_name }}
-          make_latest:  true
+          token:                ${{ secrets.GITHUB_TOKEN }}
+          tag_name:             ${{ github.ref_name }}
+          name:                 ${{ github.ref_name }}
+          make_latest:          true
           files: |
-            dist/favis-${{ matrix.target }}${{ matrix.ext }}
-            dist/favis-${{ matrix.target }}${{ matrix.ext }}.sha256
+            dist-linux/*
+            dist-macos/*
+            dist-windows/*
           generate_release_notes: true
           fail_on_unmatched_files: true
