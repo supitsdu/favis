@@ -1,6 +1,6 @@
 //! Image processing for PNG and ICO outputs.
 
-use anyhow::Result;
+use crate::error::{FavisError, Result};
 use ico::{IconDir, IconImage, ResourceType};
 use image::{imageops::FilterType, ImageEncoder};
 use indicatif::ProgressBar;
@@ -31,10 +31,18 @@ pub fn process(
             src_path.yellow()
         ));
     }
-    let img = image::open(src_path)?;
+    
+    let img = image::open(src_path)
+        .map_err(|_| FavisError::file_not_found(format!("Cannot open image file: {}", src_path)))?;
+
+    // Check minimum image dimensions for quality
+    if img.width() < 64 || img.height() < 64 {
+        return Err(FavisError::image_too_small(64));
+    }
 
     // Ensure output directory exists
-    fs::create_dir_all(out_dir)?;
+    fs::create_dir_all(out_dir)
+        .map_err(|_| FavisError::write_error(format!("Cannot create output directory: {}", out_dir)))?;
 
     // Helper: Save resized PNG
     fn save_resized_png(img: &image::DynamicImage, size: u32, out_dir: &str) -> Result<()> {
@@ -45,16 +53,21 @@ pub fn process(
 
         let mut out_path = PathBuf::from(out_dir);
         out_path.push(format!("favicon-{}x{}.png", size, size));
-        let file = File::create(&out_path)?;
+        
+        let file = File::create(&out_path)
+            .map_err(|_| FavisError::write_error(format!("Cannot create PNG file: {}", out_path.display())))?;
+        
         let buf_writer = BufWriter::new(file);
         let encoder = image::codecs::png::PngEncoder::new(buf_writer);
         let rgba = resized.to_rgba8();
+        
         encoder.write_image(
             rgba.as_raw(),
             rgba.width(),
             rgba.height(),
             image::ExtendedColorType::Rgba8,
-        )?;
+        ).map_err(|_| FavisError::write_error("Cannot encode PNG image"))?;
+        
         Ok(())
     }
 
@@ -99,7 +112,8 @@ pub fn process(
             let rgba = get_rgba_for_ico(&img, size);
             let icon_image = IconImage::from_rgba_data(size, size, rgba);
             // encode_png returns Result<IconDirEntry, _>, so handle error and add entry
-            let entry = ico::IconDirEntry::encode(&icon_image)?;
+            let entry = ico::IconDirEntry::encode(&icon_image)
+                .map_err(|_| FavisError::processing_error(format!("Cannot encode {}x{} icon for ICO", size, size)))?;
             icon_dir.add_entry(entry);
         }
 
@@ -110,8 +124,10 @@ pub fn process(
             pb.set_message(format!("{}", "Writing favicon.ico file...".cyan().bold()));
         }
 
-        let mut file = BufWriter::new(File::create(ico_path)?);
-        icon_dir.write(&mut file)?;
+        let mut file = BufWriter::new(File::create(&ico_path)
+            .map_err(|_| FavisError::write_error(format!("Cannot create ICO file: {}", ico_path.display())))?);
+        icon_dir.write(&mut file)
+            .map_err(|_| FavisError::write_error("Cannot write ICO file data"))?;
     }
 
     Ok(())

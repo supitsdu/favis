@@ -1,15 +1,17 @@
 //! Main entrypoint for the `favis` CLI.
 
-use anyhow::Result;
 use clap::{CommandFactory, Parser};
 use owo_colors::OwoColorize;
 
 mod cli;
+mod error;
 mod img;
 mod link;
 mod manifest;
 mod progress;
 mod svg;
+
+use error::{FavisError, Result};
 
 use crate::progress::create_spinner;
 use crate::svg::PixmapExt;
@@ -18,6 +20,16 @@ mod icon_sizes;
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
+    
+    if let Err(err) = run_cli(cli) {
+        err.display_friendly();
+        std::process::exit(1);
+    }
+    
+    Ok(())
+}
+
+fn run_cli(cli: Cli) -> Result<()> {
     match cli.command {
         Some(Commands::Generate {
             source,
@@ -26,15 +38,17 @@ fn main() -> Result<()> {
             output,
             raster_ok,
         }) => {
+            // Validate source file exists
+            if !std::path::Path::new(&source).exists() {
+                return Err(FavisError::file_not_found(format!("Source file: {}", source)));
+            }
+
             // Check if the source file is raster (not SVG)
             let is_svg = source.to_lowercase().ends_with(".svg");
             if !is_svg && !raster_ok {
-                eprintln!(
-                    "{}: raster source detected. Please supply an SVG for best results.",
-                    "Error".red().bold()
-                );
-                eprintln!("(Override with --raster-ok, but expect quality loss.)");
-                std::process::exit(1);
+                return Err(FavisError::invalid_format(
+                    "Raster source detected. Use --raster-ok to proceed (quality may be poor)"
+                ));
             }
 
             // Setup progress spinner
@@ -69,7 +83,13 @@ fn main() -> Result<()> {
             // SVG support: detect extension
             if is_svg {
                 spinner.set_message(format!("{}", "Loading SVG file...".cyan().bold()));
-                let data = std::fs::read(&source)?;
+                let data = std::fs::read(&source)
+                    .map_err(|_| FavisError::file_not_found(format!("Cannot read SVG file: {}", source)))?;
+
+                // Validate SVG data
+                if data.is_empty() {
+                    return Err(FavisError::invalid_svg("SVG file is empty"));
+                }
 
                 // First render the SVG at its original size
                 spinner.set_message(format!("{}", "Rendering SVG to bitmap...".cyan().bold()));
@@ -79,6 +99,11 @@ fn main() -> Result<()> {
                 spinner.set_message(format!("{}", "Converting to image format...".cyan().bold()));
                 let original_image = pixmap.to_dynamic_image()?;
 
+                // Create output directory if it doesn't exist
+                if let Err(_) = std::fs::create_dir_all(&output) {
+                    return Err(FavisError::write_error(format!("Cannot create output directory: {}", output)));
+                }
+
                 // Create a temporary file path for the original-sized PNG
                 let temp_dir = std::env::temp_dir();
                 let temp_file = temp_dir.join("favis_temp_original.png");
@@ -86,7 +111,8 @@ fn main() -> Result<()> {
 
                 // Save the original image to the temp file
                 spinner.set_message(format!("{}", "Saving temporary PNG file...".cyan().bold()));
-                original_image.save(&temp_file)?;
+                original_image.save(&temp_file)
+                    .map_err(|_| FavisError::write_error("Cannot save temporary PNG file"))?;
 
                 // Now process it like a regular PNG
                 img::process(&temp_path, &output, &png_sizes, &ico_sizes, Some(&spinner))?;
@@ -97,7 +123,7 @@ fn main() -> Result<()> {
                     "Cleaning up temporary files...".cyan().bold()
                 ));
                 if temp_file.exists() {
-                    std::fs::remove_file(temp_file)?;
+                    let _ = std::fs::remove_file(temp_file); // Ignore cleanup errors
                 }
             } else {
                 img::process(&source, &output, &png_sizes, &ico_sizes, Some(&spinner))?;

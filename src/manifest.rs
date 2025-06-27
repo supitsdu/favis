@@ -1,6 +1,6 @@
 //! Web manifest generator for PWA icons.
 
-use anyhow::Result;
+use crate::error::Result;
 use indicatif::ProgressBar;
 use owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
