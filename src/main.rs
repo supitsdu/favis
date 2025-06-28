@@ -21,12 +21,22 @@ mod icon_sizes;
 fn main() -> Result<()> {
     let cli = Cli::parse();
     
-    if let Err(err) = run_cli(cli) {
-        err.display_friendly();
-        std::process::exit(1);
+    // Setup graceful signal handling for Ctrl+C
+    let result = std::panic::catch_unwind(|| {
+        if let Err(err) = run_cli(cli) {
+            err.display_friendly();
+            std::process::exit(1);
+        }
+    });
+
+    match result {
+        Ok(_) => Ok(()),
+        Err(_) => {
+            eprintln!("{}: Operation interrupted", "Info".cyan().bold());
+            eprintln!("{}: Partial files may have been created", "Note".yellow().bold());
+            std::process::exit(130); // Standard exit code for Ctrl+C
+        }
     }
-    
-    Ok(())
 }
 
 fn run_cli(cli: Cli) -> Result<()> {
@@ -115,7 +125,18 @@ fn run_cli(cli: Cli) -> Result<()> {
                     .map_err(|_| FavisError::write_error("Cannot save temporary PNG file"))?;
 
                 // Now process it like a regular PNG
-                img::process(&temp_path, &output, &png_sizes, &ico_sizes, Some(&spinner))?;
+                match img::process(&temp_path, &output, &png_sizes, &ico_sizes, Some(&spinner)) {
+                    Ok(_) => {},
+                    Err(ref e) if e.to_string().contains("cancelled") => {
+                        spinner.abandon_with_message(format!(
+                            "{} {}",
+                            "⚠".yellow().bold(),
+                            "Operation cancelled - cleaning up temporary files...".yellow().bold()
+                        ));
+                        return Err(FavisError::user_cancelled());
+                    }
+                    Err(e) => return Err(e),
+                }
 
                 // Clean up the temporary file
                 spinner.set_message(format!(
@@ -126,7 +147,18 @@ fn run_cli(cli: Cli) -> Result<()> {
                     let _ = std::fs::remove_file(temp_file); // Ignore cleanup errors
                 }
             } else {
-                img::process(&source, &output, &png_sizes, &ico_sizes, Some(&spinner))?;
+                match img::process(&source, &output, &png_sizes, &ico_sizes, Some(&spinner)) {
+                    Ok(_) => {},
+                    Err(ref e) if e.to_string().contains("cancelled") => {
+                        spinner.abandon_with_message(format!(
+                            "{} {}",
+                            "⚠".yellow().bold(),
+                            "Operation cancelled by user".yellow().bold()
+                        ));
+                        return Err(FavisError::user_cancelled());
+                    }
+                    Err(e) => return Err(e),
+                }
             }
 
             if gen_manifest {

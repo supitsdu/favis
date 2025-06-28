@@ -8,8 +8,55 @@ use owo_colors::OwoColorize;
 use std::fs::{self, File};
 use std::io::BufWriter;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+
+/// Tracks files created during processing for cleanup on interruption
+#[derive(Debug)]
+struct FileTracker {
+    files: Vec<PathBuf>,
+    cancelled: Arc<AtomicBool>,
+}
+
+impl FileTracker {
+    fn new() -> Self {
+        Self {
+            files: Vec::new(),
+            cancelled: Arc::new(AtomicBool::new(false)),
+        }
+    }
+
+    fn track(&mut self, path: PathBuf) {
+        self.files.push(path);
+    }
+
+    fn is_cancelled(&self) -> bool {
+        self.cancelled.load(Ordering::Relaxed)
+    }
+
+    fn cleanup(&self) {
+        for file in &self.files {
+            if file.exists() {
+                let _ = fs::remove_file(file); // Ignore errors during cleanup
+            }
+        }
+    }
+
+    fn cancel(&self) {
+        self.cancelled.store(true, Ordering::Relaxed);
+    }
+}
+
+impl Drop for FileTracker {
+    fn drop(&mut self) {
+        if self.is_cancelled() {
+            self.cleanup();
+        }
+    }
+}
 
 /// Processes a source image (PNG/JPEG/GIF) and generates resized PNGs and an optional ICO.
+/// Includes graceful handling of user cancellation and cleanup of partial files.
 ///
 /// # Arguments
 /// * `src_path` - Path to the source image file.
@@ -23,6 +70,8 @@ pub fn process(
     ico_sizes: &[u32],
     progress: Option<&ProgressBar>,
 ) -> Result<()> {
+    let mut file_tracker = FileTracker::new();
+
     // Read and decode source
     if let Some(pb) = progress {
         pb.set_message(format!(
@@ -31,7 +80,7 @@ pub fn process(
             src_path.yellow()
         ));
     }
-    
+
     let img = image::open(src_path)
         .map_err(|_| FavisError::file_not_found(format!("Cannot open image file: {}", src_path)))?;
 
@@ -44,8 +93,10 @@ pub fn process(
     fs::create_dir_all(out_dir)
         .map_err(|_| FavisError::write_error(format!("Cannot create output directory: {}", out_dir)))?;
 
+    let mut file_tracker = FileTracker::new();
+
     // Helper: Save resized PNG
-    fn save_resized_png(img: &image::DynamicImage, size: u32, out_dir: &str) -> Result<()> {
+    fn save_resized_png(img: &image::DynamicImage, size: u32, out_dir: &str, file_tracker: &mut FileTracker) -> Result<()> {
         let mut resized = img.resize_exact(size, size, FilterType::Lanczos3);
 
         // Clear edge artifacts by ensuring transparency or solid color
@@ -53,21 +104,23 @@ pub fn process(
 
         let mut out_path = PathBuf::from(out_dir);
         out_path.push(format!("favicon-{}x{}.png", size, size));
-        
+
+        file_tracker.track(out_path.clone());
+
         let file = File::create(&out_path)
             .map_err(|_| FavisError::write_error(format!("Cannot create PNG file: {}", out_path.display())))?;
-        
+
         let buf_writer = BufWriter::new(file);
         let encoder = image::codecs::png::PngEncoder::new(buf_writer);
         let rgba = resized.to_rgba8();
-        
+
         encoder.write_image(
             rgba.as_raw(),
             rgba.width(),
             rgba.height(),
             image::ExtendedColorType::Rgba8,
         ).map_err(|_| FavisError::write_error("Cannot encode PNG image"))?;
-        
+
         Ok(())
     }
 
@@ -79,6 +132,11 @@ pub fn process(
 
     // Generate PNGs
     for &size in png_sizes {
+        // Check for cancellation before each PNG
+        if file_tracker.is_cancelled() {
+            return Err(FavisError::user_cancelled());
+        }
+        
         if let Some(pb) = progress {
             pb.set_message(format!(
                 "{} {}x{}",
@@ -87,11 +145,16 @@ pub fn process(
                 size.to_string().yellow()
             ));
         }
-        save_resized_png(&img, size, out_dir)?;
+        save_resized_png(&img, size, out_dir, &mut file_tracker)?;
     }
 
     // Generate ICO if requested
     if !ico_sizes.is_empty() {
+        // Check for cancellation before ICO generation
+        if file_tracker.is_cancelled() {
+            return Err(FavisError::user_cancelled());
+        }
+        
         if let Some(pb) = progress {
             pb.set_message(format!(
                 "{}",
@@ -101,6 +164,11 @@ pub fn process(
 
         let mut icon_dir = IconDir::new(ResourceType::Icon);
         for &size in ico_sizes {
+            // Check for cancellation during ICO size processing
+            if file_tracker.is_cancelled() {
+                return Err(FavisError::user_cancelled());
+            }
+            
             if let Some(pb) = progress {
                 pb.set_message(format!(
                     "{} {}x{}",
@@ -120,6 +188,9 @@ pub fn process(
         let mut ico_path = PathBuf::from(out_dir);
         ico_path.push("favicon.ico");
 
+        // Track ICO file for cleanup if cancelled
+        file_tracker.track(ico_path.clone());
+
         if let Some(pb) = progress {
             pb.set_message(format!("{}", "Writing favicon.ico file...".cyan().bold()));
         }
@@ -130,5 +201,8 @@ pub fn process(
             .map_err(|_| FavisError::write_error("Cannot write ICO file data"))?;
     }
 
+    // If we get here, processing completed successfully - don't cleanup files
+    std::mem::forget(file_tracker);
+    
     Ok(())
 }

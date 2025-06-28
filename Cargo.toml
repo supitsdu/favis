@@ -22,3 +22,4 @@ tiny-skia = "0.11"  # Required by resvg
 usvg = "0.45.1"       # Required by resvg
 indicatif = "0.17.11"
 owo-colors = "4.2.1"
+ctrlc = "3.4"         # For graceful signal handling

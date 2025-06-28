@@ -58,6 +58,18 @@ impl FavisError {
         Self::new(context, suggestion)
     }
 
+    pub fn user_cancelled() -> Self {
+        Self::new(
+            "Operation cancelled by user",
+            Some("Partial files may have been created and will be cleaned up".to_string())
+        )
+    }
+
+    pub fn interrupted(details: impl Into<String>) -> Self {
+        let context = format!("Process interrupted: {}", details.into());
+        Self::new(context, Some("Cleaning up temporary files and partial outputs".to_string()))
+    }
+
     /// Display user-friendly error message with colors and suggestions
     pub fn display_friendly(&self) {
         eprintln!("{}: {}", "Error".red().bold(), self.context);
