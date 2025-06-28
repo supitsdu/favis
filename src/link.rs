@@ -43,10 +43,10 @@ impl LinkTag {
         let mut parts = vec![format!("rel=\"{}\"", self.rel)];
         parts.push(format!("href=\"{}\"", self.href));
         if let Some(s) = &self.sizes {
-            parts.push(format!("sizes=\"{}\"", s));
+            parts.push(format!("sizes=\"{s}\""));
         }
         if let Some(t) = &self.type_attr {
-            parts.push(format!("type=\"{}\"", t));
+            parts.push(format!("type=\"{t}\""));
         }
         format!("<link {}/>", parts.join(" "))
     }
@@ -56,7 +56,7 @@ impl LinkTag {
 pub fn generate_links_from_manifest(manifest_path: &str, base_url: Option<&str>) -> Result<String> {
     // Read and parse manifest file
     let raw = fs::read_to_string(manifest_path).map_err(|_| {
-        FavisError::file_not_found(format!("Cannot read manifest file: {}", manifest_path))
+        FavisError::file_not_found(format!("Cannot read manifest file: {manifest_path}"))
     })?;
     let manifest: Manifest = serde_json::from_str(&raw)
         .map_err(|_| FavisError::invalid_format("Invalid JSON in manifest.webmanifest"))?;
@@ -190,7 +190,7 @@ pub fn generate_links(
         }
     } else {
         // Print to stdout if no output file specified
-        println!("{}", html);
+        println!("{html}");
     }
     Ok(())
 }

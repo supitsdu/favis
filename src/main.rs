@@ -114,7 +114,7 @@ fn run_cli(cli: Cli, cancelled: Arc<AtomicBool>) -> Result<()> {
             if is_svg {
                 spinner.set_message(format!("{}", "Loading SVG file...".cyan().bold()));
                 let data = std::fs::read(&source).map_err(|_| {
-                    FavisError::file_not_found(format!("Cannot read SVG file: {}", source))
+                    FavisError::file_not_found(format!("Cannot read SVG file: {source}"))
                 })?;
 
                 // Validate SVG data
@@ -131,10 +131,9 @@ fn run_cli(cli: Cli, cancelled: Arc<AtomicBool>) -> Result<()> {
                 let original_image = pixmap.to_dynamic_image()?;
 
                 // Create output directory if it doesn't exist
-                if let Err(_) = std::fs::create_dir_all(&output) {
+                if std::fs::create_dir_all(&output).is_err() {
                     return Err(FavisError::write_error(format!(
-                        "Cannot create output directory: {}",
-                        output
+                        "Cannot create output directory: {output}"
                     )));
                 }
 

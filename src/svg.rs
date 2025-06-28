@@ -32,8 +32,7 @@ pub fn render_svg(
 
     let mut pixmap = Pixmap::new(width, height).ok_or_else(|| {
         FavisError::processing_error(format!(
-            "Cannot create {}x{} pixmap - insufficient memory",
-            width, height
+            "Cannot create {width}x{height} pixmap - insufficient memory"
         ))
     })?;
 

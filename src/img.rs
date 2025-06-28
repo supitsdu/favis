@@ -79,7 +79,7 @@ pub fn process(
     }
 
     let img = image::open(src_path)
-        .map_err(|_| FavisError::file_not_found(format!("Cannot open image file: {}", src_path)))?;
+        .map_err(|_| FavisError::file_not_found(format!("Cannot open image file: {src_path}")))?;
 
     // Check minimum image dimensions for quality
     if img.width() < 64 || img.height() < 64 {
@@ -88,7 +88,7 @@ pub fn process(
 
     // Ensure output directory exists
     fs::create_dir_all(out_dir).map_err(|_| {
-        FavisError::write_error(format!("Cannot create output directory: {}", out_dir))
+        FavisError::write_error(format!("Cannot create output directory: {out_dir}"))
     })?;
 
     let mut file_tracker = FileTracker::new_with_cancellation(cancelled);
@@ -106,7 +106,7 @@ pub fn process(
         resized = resized.adjust_contrast(1.0); // Adjust contrast to minimize border artifacts
 
         let mut out_path = PathBuf::from(out_dir);
-        out_path.push(format!("favicon-{}x{}.png", size, size));
+        out_path.push(format!("favicon-{size}x{size}.png"));
 
         file_tracker.track(out_path.clone());
 
@@ -187,10 +187,7 @@ pub fn process(
             let icon_image = IconImage::from_rgba_data(size, size, rgba);
             // encode_png returns Result<IconDirEntry, _>, so handle error and add entry
             let entry = ico::IconDirEntry::encode(&icon_image).map_err(|_| {
-                FavisError::processing_error(format!(
-                    "Cannot encode {}x{} icon for ICO",
-                    size, size
-                ))
+                FavisError::processing_error(format!("Cannot encode {size}x{size} icon for ICO"))
             })?;
             icon_dir.add_entry(entry);
         }

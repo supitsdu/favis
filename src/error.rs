@@ -50,10 +50,8 @@ impl FavisError {
     }
 
     pub fn image_too_small(min_size: u32) -> Self {
-        let context = format!(
-            "Oops! Image is too small - needs to be at least {}x{} pixels",
-            min_size, min_size
-        );
+        let context =
+            format!("Oops! Image is too small - needs to be at least {min_size}x{min_size} pixels");
         Self::new(
             context,
             Some(
@@ -154,7 +152,7 @@ impl From<resvg::usvg::Error> for FavisError {
 
 impl From<serde_json::Error> for FavisError {
     fn from(err: serde_json::Error) -> Self {
-        FavisError::invalid_format(format!("JSON parsing error: {}", err))
+        FavisError::invalid_format(format!("JSON parsing error: {err}"))
     }
 }
 
