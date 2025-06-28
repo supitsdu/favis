@@ -50,7 +50,7 @@ fn run_cli(cli: Cli) -> Result<()> {
         }) => {
             // Validate source file exists
             if !std::path::Path::new(&source).exists() {
-                return Err(FavisError::file_not_found(format!("Source file: {}", source)));
+                return Err(FavisError::file_not_found(&source));
             }
 
             // Check file extension to determine format
@@ -63,14 +63,14 @@ fn run_cli(cli: Cli) -> Result<()> {
             // Secondary support: PNG (raster, with quality warnings)
             if !is_svg && !is_png {
                 return Err(FavisError::invalid_format(
-                    "Unsupported file format. Please provide an SVG file (recommended) or PNG file"
+                    "Oops! That file format isn't supported."
                 ));
             }
 
             // Check if using PNG (raster) and require explicit approval
             if is_png && !raster_ok {
                 return Err(FavisError::invalid_format(
-                    "PNG raster source detected. Use --raster-ok to proceed (quality may be poor at larger sizes)"
+                    "PNG detected! You'll need the --raster-ok flag to continue."
                 ));
             }
 

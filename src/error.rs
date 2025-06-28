@@ -19,41 +19,48 @@ impl FavisError {
     }
 
     pub fn file_not_found(path: impl Into<String>) -> Self {
-        let context = path.into();
-        Self::new(context, Some("Check the file path and ensure the file exists".to_string()))
+        let context = format!("Hmm, can't find that file: {}", path.into());
+        Self::new(context, Some("Double-check the path and make sure the file exists!".to_string()))
     }
 
     pub fn permission_denied(path: impl Into<String>) -> Self {
-        let context = path.into();
-        Self::new(context, Some("Try running with elevated permissions or check file/directory permissions".to_string()))
+        let context = format!("Permission denied: {}", path.into());
+        Self::new(context, Some("Try running with elevated permissions or check file/directory permissions.".to_string()))
     }
 
     pub fn invalid_format(details: impl Into<String>) -> Self {
         let context = details.into();
-        Self::new(context, Some("Provide an SVG file (recommended) or PNG file with --raster-ok flag".to_string()))
+        let suggestion = if context.contains("isn't supported") {
+            "Try an SVG (best option!) or a PNG with --raster-ok."
+        } else if context.contains("--raster-ok flag") {
+            "Add --raster-ok to use PNG files (quality might not be perfect at larger sizes)."
+        } else {
+            "Use an SVG file for best results, or PNG with --raster-ok."
+        };
+        Self::new(context, Some(suggestion.to_string()))
     }
 
     pub fn image_too_small(min_size: u32) -> Self {
-        let context = format!("Image should be at least {}x{} pixels", min_size, min_size);
-        Self::new(context, Some("Use a larger source image or an SVG for better quality at all sizes".to_string()))
+        let context = format!("Oops! Image is too small - needs to be at least {}x{} pixels", min_size, min_size);
+        Self::new(context, Some("Try a larger source image or use an SVG for crisp results at any size!".to_string()))
     }
 
     pub fn invalid_svg(reason: impl Into<String>) -> Self {
-        let context = reason.into();
-        Self::new(context, Some("Check SVG syntax or try a different SVG file".to_string()))
+        let context = format!("SVG trouble: {}", reason.into());
+        Self::new(context, Some("Check the SVG syntax or try a different SVG file.".to_string()))
     }
 
     pub fn write_error(path: impl Into<String>) -> Self {
-        let context = path.into();
-        Self::new(context, Some("Ensure the output directory exists and is writable".to_string()))
+        let context = format!("Can't write to: {}", path.into());
+        Self::new(context, Some("Make sure the output directory exists and you have write permissions.".to_string()))
     }
 
     pub fn processing_error(details: impl Into<String>) -> Self {
-        let context = details.into();
+        let context = format!("Processing hiccup: {}", details.into());
         let suggestion = if context.contains("memory") || context.contains("allocation") {
-            Some("Try with a smaller image or close other applications to free memory".to_string())
+            Some("Try with a smaller image or close other apps to free up memory.".to_string())
         } else {
-            Some("Check system resources and try again".to_string())
+            Some("Check system resources and give it another shot!".to_string())
         };
         Self::new(context, suggestion)
     }
@@ -61,7 +68,7 @@ impl FavisError {
     pub fn user_cancelled() -> Self {
         Self::new(
             "Operation cancelled by user",
-            Some("Partial files may have been created and will be cleaned up".to_string())
+            Some("No worries! Partial files have been cleaned up.".to_string())
         )
     }
 
@@ -72,11 +79,11 @@ impl FavisError {
         Self::new(context, Some("Cleaning up temporary files and partial outputs".to_string()))
     }
 
-    /// Display user-friendly error message with colors and suggestions
+    /// Display user-friendly error message with colors and symbols
     pub fn display_friendly(&self) {
-        eprintln!("{}: {}", "Error".red().bold(), self.context);
+        eprintln!("{} {}", "✗".red().bold(), self.context.red().bold());
         if let Some(suggestion) = &self.suggestion {
-            eprintln!("{}: {}", "Suggestion".cyan().bold(), suggestion);
+            eprintln!("{} {}", "💡".yellow().bold(), suggestion.yellow());
         }
     }
 }
