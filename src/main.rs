@@ -53,21 +53,34 @@ fn run_cli(cli: Cli) -> Result<()> {
                 return Err(FavisError::file_not_found(format!("Source file: {}", source)));
             }
 
-            // Check if the source file is raster (not SVG)
-            let is_svg = source.to_lowercase().ends_with(".svg");
-            if !is_svg && !raster_ok {
+            // Check file extension to determine format
+            let source_lower = source.to_lowercase();
+            let is_svg = source_lower.ends_with(".svg");
+            let is_png = source_lower.ends_with(".png");
+
+            // Validate that the file is a supported image format
+            // Primary focus: SVG (vector graphics)
+            // Secondary support: PNG (raster, with quality warnings)
+            if !is_svg && !is_png {
                 return Err(FavisError::invalid_format(
-                    "Raster source detected. Use --raster-ok to proceed (quality may be poor)"
+                    "Unsupported file format. Please provide an SVG file (recommended) or PNG file"
+                ));
+            }
+
+            // Check if using PNG (raster) and require explicit approval
+            if is_png && !raster_ok {
+                return Err(FavisError::invalid_format(
+                    "PNG raster source detected. Use --raster-ok to proceed (quality may be poor at larger sizes)"
                 ));
             }
 
             // Setup progress spinner
             let spinner = create_spinner("Starting favicon generation");
 
-            // Show warning for raster images if proceeding
-            if !is_svg && raster_ok {
+            // Show warning for PNG images if proceeding
+            if is_png && raster_ok {
                 spinner.set_message(format!(
-                    "{} Raster image quality may be poor at larger sizes",
+                    "{} PNG raster image quality may be poor at larger sizes",
                     "Warning:".yellow().bold()
                 ));
                 std::thread::sleep(std::time::Duration::from_millis(1500)); // Show warning briefly

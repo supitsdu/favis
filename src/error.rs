@@ -30,7 +30,7 @@ impl FavisError {
 
     pub fn invalid_format(details: impl Into<String>) -> Self {
         let context = details.into();
-        Self::new(context, Some("Ensure the file is a valid SVG, PNG, JPEG, or GIF image".to_string()))
+        Self::new(context, Some("Provide an SVG file (recommended) or PNG file with --raster-ok flag".to_string()))
     }
 
     pub fn image_too_small(min_size: u32) -> Self {
