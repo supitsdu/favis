@@ -42,6 +42,8 @@ impl FileTracker {
         }
     }
 
+    // TODO: Connect to signal handler for graceful interruption
+    #[allow(dead_code)]
     fn cancel(&self) {
         self.cancelled.store(true, Ordering::Relaxed);
     }
@@ -70,8 +72,6 @@ pub fn process(
     ico_sizes: &[u32],
     progress: Option<&ProgressBar>,
 ) -> Result<()> {
-    let mut file_tracker = FileTracker::new();
-
     // Read and decode source
     if let Some(pb) = progress {
         pb.set_message(format!(

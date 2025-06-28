@@ -65,6 +65,8 @@ impl FavisError {
         )
     }
 
+    // TODO: Use for signal-based interruption handling
+    #[allow(dead_code)]
     pub fn interrupted(details: impl Into<String>) -> Self {
         let context = format!("Process interrupted: {}", details.into());
         Self::new(context, Some("Cleaning up temporary files and partial outputs".to_string()))
