@@ -55,8 +55,9 @@ impl LinkTag {
 /// Reads a manifest, builds link tags, and returns HTML snippet
 pub fn generate_links_from_manifest(manifest_path: &str, base_url: Option<&str>) -> Result<String> {
     // Read and parse manifest file
-    let raw = fs::read_to_string(manifest_path)
-        .map_err(|_| FavisError::file_not_found(format!("Cannot read manifest file: {}", manifest_path)))?;
+    let raw = fs::read_to_string(manifest_path).map_err(|_| {
+        FavisError::file_not_found(format!("Cannot read manifest file: {}", manifest_path))
+    })?;
     let manifest: Manifest = serde_json::from_str(&raw)
         .map_err(|_| FavisError::invalid_format("Invalid JSON in manifest.webmanifest"))?;
 

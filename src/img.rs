@@ -87,13 +87,19 @@ pub fn process(
     }
 
     // Ensure output directory exists
-    fs::create_dir_all(out_dir)
-        .map_err(|_| FavisError::write_error(format!("Cannot create output directory: {}", out_dir)))?;
+    fs::create_dir_all(out_dir).map_err(|_| {
+        FavisError::write_error(format!("Cannot create output directory: {}", out_dir))
+    })?;
 
     let mut file_tracker = FileTracker::new_with_cancellation(cancelled);
 
     // Helper: Save resized PNG
-    fn save_resized_png(img: &image::DynamicImage, size: u32, out_dir: &str, file_tracker: &mut FileTracker) -> Result<()> {
+    fn save_resized_png(
+        img: &image::DynamicImage,
+        size: u32,
+        out_dir: &str,
+        file_tracker: &mut FileTracker,
+    ) -> Result<()> {
         let mut resized = img.resize_exact(size, size, FilterType::Lanczos3);
 
         // Clear edge artifacts by ensuring transparency or solid color
@@ -104,19 +110,22 @@ pub fn process(
 
         file_tracker.track(out_path.clone());
 
-        let file = File::create(&out_path)
-            .map_err(|_| FavisError::write_error(format!("Cannot create PNG file: {}", out_path.display())))?;
+        let file = File::create(&out_path).map_err(|_| {
+            FavisError::write_error(format!("Cannot create PNG file: {}", out_path.display()))
+        })?;
 
         let buf_writer = BufWriter::new(file);
         let encoder = image::codecs::png::PngEncoder::new(buf_writer);
         let rgba = resized.to_rgba8();
 
-        encoder.write_image(
-            rgba.as_raw(),
-            rgba.width(),
-            rgba.height(),
-            image::ExtendedColorType::Rgba8,
-        ).map_err(|_| FavisError::write_error("Cannot encode PNG image"))?;
+        encoder
+            .write_image(
+                rgba.as_raw(),
+                rgba.width(),
+                rgba.height(),
+                image::ExtendedColorType::Rgba8,
+            )
+            .map_err(|_| FavisError::write_error("Cannot encode PNG image"))?;
 
         Ok(())
     }
@@ -133,7 +142,7 @@ pub fn process(
         if file_tracker.is_cancelled() {
             return Err(FavisError::user_cancelled());
         }
-        
+
         if let Some(pb) = progress {
             pb.set_message(format!(
                 "{} {}x{}",
@@ -151,7 +160,7 @@ pub fn process(
         if file_tracker.is_cancelled() {
             return Err(FavisError::user_cancelled());
         }
-        
+
         if let Some(pb) = progress {
             pb.set_message(format!(
                 "{}",
@@ -165,7 +174,7 @@ pub fn process(
             if file_tracker.is_cancelled() {
                 return Err(FavisError::user_cancelled());
             }
-            
+
             if let Some(pb) = progress {
                 pb.set_message(format!(
                     "{} {}x{}",
@@ -177,8 +186,12 @@ pub fn process(
             let rgba = get_rgba_for_ico(&img, size);
             let icon_image = IconImage::from_rgba_data(size, size, rgba);
             // encode_png returns Result<IconDirEntry, _>, so handle error and add entry
-            let entry = ico::IconDirEntry::encode(&icon_image)
-                .map_err(|_| FavisError::processing_error(format!("Cannot encode {}x{} icon for ICO", size, size)))?;
+            let entry = ico::IconDirEntry::encode(&icon_image).map_err(|_| {
+                FavisError::processing_error(format!(
+                    "Cannot encode {}x{} icon for ICO",
+                    size, size
+                ))
+            })?;
             icon_dir.add_entry(entry);
         }
 
@@ -192,14 +205,16 @@ pub fn process(
             pb.set_message(format!("{}", "Writing favicon.ico file...".cyan().bold()));
         }
 
-        let mut file = BufWriter::new(File::create(&ico_path)
-            .map_err(|_| FavisError::write_error(format!("Cannot create ICO file: {}", ico_path.display())))?);
-        icon_dir.write(&mut file)
+        let mut file = BufWriter::new(File::create(&ico_path).map_err(|_| {
+            FavisError::write_error(format!("Cannot create ICO file: {}", ico_path.display()))
+        })?);
+        icon_dir
+            .write(&mut file)
             .map_err(|_| FavisError::write_error("Cannot write ICO file data"))?;
     }
 
     // If we get here, processing completed successfully - don't cleanup files
     std::mem::forget(file_tracker);
-    
+
     Ok(())
 }

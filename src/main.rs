@@ -3,7 +3,10 @@
 use clap::{CommandFactory, Parser};
 use owo_colors::OwoColorize;
 
-use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 
 mod cli;
 mod error;
@@ -22,23 +25,24 @@ mod icon_sizes;
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
-    
+
     // Setup global cancellation flag for signal handling
     let cancelled = Arc::new(AtomicBool::new(false));
     let cancelled_clone = cancelled.clone();
-    
+
     // Setup graceful signal handling for Ctrl+C
     ctrlc::set_handler(move || {
         cancelled_clone.store(true, Ordering::Relaxed);
         // Silent cancellation - let the error handler provide the user message
-    }).expect("Error setting Ctrl+C handler");
+    })
+    .expect("Error setting Ctrl+C handler");
 
     // Run the CLI with cancellation support
     if let Err(err) = run_cli(cli, cancelled) {
         err.display_friendly();
         std::process::exit(1);
     }
-    
+
     Ok(())
 }
 
@@ -66,14 +70,14 @@ fn run_cli(cli: Cli, cancelled: Arc<AtomicBool>) -> Result<()> {
             // Secondary support: PNG (raster, with quality warnings)
             if !is_svg && !is_png {
                 return Err(FavisError::invalid_format(
-                    "Oops! That file format isn't supported."
+                    "Oops! That file format isn't supported.",
                 ));
             }
 
             // Check if using PNG (raster) and require explicit approval
             if is_png && !raster_ok {
                 return Err(FavisError::invalid_format(
-                    "PNG detected! You'll need the --raster-ok flag to continue."
+                    "PNG detected! You'll need the --raster-ok flag to continue.",
                 ));
             }
 
@@ -109,8 +113,9 @@ fn run_cli(cli: Cli, cancelled: Arc<AtomicBool>) -> Result<()> {
             // SVG support: detect extension
             if is_svg {
                 spinner.set_message(format!("{}", "Loading SVG file...".cyan().bold()));
-                let data = std::fs::read(&source)
-                    .map_err(|_| FavisError::file_not_found(format!("Cannot read SVG file: {}", source)))?;
+                let data = std::fs::read(&source).map_err(|_| {
+                    FavisError::file_not_found(format!("Cannot read SVG file: {}", source))
+                })?;
 
                 // Validate SVG data
                 if data.is_empty() {
@@ -127,7 +132,10 @@ fn run_cli(cli: Cli, cancelled: Arc<AtomicBool>) -> Result<()> {
 
                 // Create output directory if it doesn't exist
                 if let Err(_) = std::fs::create_dir_all(&output) {
-                    return Err(FavisError::write_error(format!("Cannot create output directory: {}", output)));
+                    return Err(FavisError::write_error(format!(
+                        "Cannot create output directory: {}",
+                        output
+                    )));
                 }
 
                 // Create a temporary file path for the original-sized PNG
@@ -137,12 +145,20 @@ fn run_cli(cli: Cli, cancelled: Arc<AtomicBool>) -> Result<()> {
 
                 // Save the original image to the temp file
                 spinner.set_message(format!("{}", "Saving temporary PNG file...".cyan().bold()));
-                original_image.save(&temp_file)
+                original_image
+                    .save(&temp_file)
                     .map_err(|_| FavisError::write_error("Cannot save temporary PNG file"))?;
 
                 // Now process it like a regular PNG
-                match img::process(&temp_path, &output, &png_sizes, &ico_sizes, Some(&spinner), cancelled.clone()) {
-                    Ok(_) => {},
+                match img::process(
+                    &temp_path,
+                    &output,
+                    &png_sizes,
+                    &ico_sizes,
+                    Some(&spinner),
+                    cancelled.clone(),
+                ) {
+                    Ok(_) => {}
                     Err(ref e) if e.to_string().contains("cancelled") => {
                         spinner.abandon();
                         return Err(FavisError::user_cancelled());
@@ -159,8 +175,15 @@ fn run_cli(cli: Cli, cancelled: Arc<AtomicBool>) -> Result<()> {
                     let _ = std::fs::remove_file(temp_file); // Ignore cleanup errors
                 }
             } else {
-                match img::process(&source, &output, &png_sizes, &ico_sizes, Some(&spinner), cancelled.clone()) {
-                    Ok(_) => {},
+                match img::process(
+                    &source,
+                    &output,
+                    &png_sizes,
+                    &ico_sizes,
+                    Some(&spinner),
+                    cancelled.clone(),
+                ) {
+                    Ok(_) => {}
                     Err(ref e) if e.to_string().contains("cancelled") => {
                         spinner.abandon();
                         return Err(FavisError::user_cancelled());

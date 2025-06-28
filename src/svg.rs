@@ -30,8 +30,12 @@ pub fn render_svg(
         ));
     }
 
-    let mut pixmap = Pixmap::new(width, height)
-        .ok_or_else(|| FavisError::processing_error(format!("Cannot create {}x{} pixmap - insufficient memory", width, height)))?;
+    let mut pixmap = Pixmap::new(width, height).ok_or_else(|| {
+        FavisError::processing_error(format!(
+            "Cannot create {}x{} pixmap - insufficient memory",
+            width, height
+        ))
+    })?;
 
     resvg::render(&tree, usvg::Transform::default(), &mut pixmap.as_mut());
 
@@ -74,8 +78,9 @@ impl PixmapExt for Pixmap {
         let data = self.data();
 
         // Create an RgbaImage from the pixmap data
-        let img = image::RgbaImage::from_raw(width, height, data.to_vec())
-            .ok_or_else(|| FavisError::processing_error("Cannot convert pixmap data to image format"))?;
+        let img = image::RgbaImage::from_raw(width, height, data.to_vec()).ok_or_else(|| {
+            FavisError::processing_error("Cannot convert pixmap data to image format")
+        })?;
 
         Ok(image::DynamicImage::ImageRgba8(img))
     }
