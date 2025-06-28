@@ -2,8 +2,8 @@
 
 //! Generate HTML <link> tags or JSON metadata from a webmanifest
 
+use crate::error::{FavisError, Result};
 use crate::icon_sizes::{get_all_sizes, IconPurpose};
-use anyhow::{Context, Result};
 use indicatif::ProgressBar;
 use owo_colors::OwoColorize;
 use serde::Deserialize;
@@ -43,10 +43,10 @@ impl LinkTag {
         let mut parts = vec![format!("rel=\"{}\"", self.rel)];
         parts.push(format!("href=\"{}\"", self.href));
         if let Some(s) = &self.sizes {
-            parts.push(format!("sizes=\"{}\"", s));
+            parts.push(format!("sizes=\"{s}\""));
         }
         if let Some(t) = &self.type_attr {
-            parts.push(format!("type=\"{}\"", t));
+            parts.push(format!("type=\"{t}\""));
         }
         format!("<link {}/>", parts.join(" "))
     }
@@ -55,10 +55,11 @@ impl LinkTag {
 /// Reads a manifest, builds link tags, and returns HTML snippet
 pub fn generate_links_from_manifest(manifest_path: &str, base_url: Option<&str>) -> Result<String> {
     // Read and parse manifest file
-    let raw = fs::read_to_string(manifest_path)
-        .with_context(|| format!("Failed to read manifest `{}`", manifest_path))?;
-    let manifest: Manifest =
-        serde_json::from_str(&raw).context("Invalid JSON in manifest.webmanifest")?;
+    let raw = fs::read_to_string(manifest_path).map_err(|_| {
+        FavisError::file_not_found(format!("Cannot read manifest file: {manifest_path}"))
+    })?;
+    let manifest: Manifest = serde_json::from_str(&raw)
+        .map_err(|_| FavisError::invalid_format("Invalid JSON in manifest.webmanifest"))?;
 
     // Load all known icon sizes and build a lookup by size string
     let known_sizes = get_all_sizes();
@@ -189,7 +190,7 @@ pub fn generate_links(
         }
     } else {
         // Print to stdout if no output file specified
-        println!("{}", html);
+        println!("{html}");
     }
     Ok(())
 }

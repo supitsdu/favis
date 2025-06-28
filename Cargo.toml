@@ -1,10 +1,10 @@
 [package]
 name = "favis"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["E. M. Santos <contact@supitsdu.me"]
 license = "MIT"
-description = "Favicon and Web Icon Generator"
+description = "favis turns one image into all the favicons and web assets you need — fast, free, and open-source."
 homepage = "https://github.com/supitsdu/favis"
 repository = "https://github.com/supitsdu/favis"
 readme = "README.md"
@@ -12,7 +12,6 @@ keywords = ["favicon", "cli", "rust"]
 categories = ["command-line-utilities"]
 
 [dependencies]
-anyhow = "1.0"
 clap = { version = "4.4", features = ["derive"] }
 image = "0.25.6"
 serde = { version = "1.0", features = ["derive"] }
@@ -23,3 +22,4 @@ tiny-skia = "0.11"  # Required by resvg
 usvg = "0.45.1"       # Required by resvg
 indicatif = "0.17.11"
 owo-colors = "4.2.1"
+ctrlc = "3.4"         # For graceful signal handling

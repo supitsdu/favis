@@ -5,26 +5,26 @@ use clap::{Parser, Subcommand, ValueEnum};
 #[derive(Parser)]
 #[command(
     name = "favis",
-    about = "Generate web favicons and manifest for your PWA or website.",
+    about = "favis turns one image into all the favicons and web assets you need — fast, free, and open-source.",
     long_about = "\
-favis is a CLI tool to generate favicon PNGs, ICOs, and web manifests from a single image source.
+favis turns one image into all the favicons and web assets you need — fast, free, and open-source.
 
-Overview:
-  - Creates multiple PNG favicon images in industry-standard sizes
-  - Generates a favicon.ico file with multiple sizes embedded
-  - Optionally generates a web manifest file for PWAs
-  - Can create HTML <link> tags from an existing manifest
+What it does:
+  - Generates standard-sized PNG favicons automatically
+  - Bundles them into a multi-resolution favicon.ico file
+  - Can generate a web manifest for PWAs
+  - Can also create HTML <link> tags from an existing manifest
 
-Usage:
+How to use it:
   > favis generate logo.svg
   > favis generate logo.svg --manifest
   > favis generate logo.svg --coverage extended
   > favis link ./public/manifest.webmanifest
 
 Tips:
-  - SVG sources are strongly recommended for best quality at all sizes
-  - Use --output to specify where generated files should be saved
-  - Run 'favis <SUBCOMMAND> --help' for detailed options for each command
+  - Got an SVG? Perfect! It's the best source for clean, scalable icons
+  - Use --output to choose where files are saved
+  - Run 'favis <SUBCOMMAND> --help' for more options
 ",
     author,
     version,
@@ -49,25 +49,30 @@ pub enum SizeLevel {
 pub enum Commands {
     /// Generate favicon PNGs, ICO, and manifest from a source image
     #[command(
-        about = "Generate icons and manifest from a source image",
+        about = "Turn your image into all the favicons you need — easy and fast!",
         long_about = "\
-Generate favicon PNGs, ICO, and optionally a web manifest from a single source image.
+Turn your image into all the favicons and icons you need — easy and fast!
 
-Output:
-  - Multiple PNG favicon files in various sizes (e.g., favicon-32x32.png)
-  - A single favicon.ico file with multiple sizes embedded
-  - Optional manifest.webmanifest file for PWAs
+What it creates:
+  - PNG favicons in all the standard sizes (e.g. favicon-32x32.png)
+  - A favicon.ico file with multiple sizes baked in
+  - An optional manifest.webmanifest file for PWAs
 
-Examples:
+How to use it:
   > favis generate logo.svg
   > favis generate logo.svg --coverage extended --manifest --output ./public
   > favis generate logo.png --raster-ok
+
+Helpful tips:
+  - SVGs are ideal — they scale cleanly at any size
+  - Use --coverage extended to generate icons for every use case
+  - PNGs are fine too — just pass --raster-ok and you're good to go!
 "
     )]
     Generate {
         /// Path to the source image file (SVG preferred)
         #[arg(
-            help = "Source image file (SVG strongly recommended for quality)",
+            help = "Source image file — SVG recommended for best quality",
             value_name = "SOURCE"
         )]
         source: String,
@@ -78,13 +83,13 @@ Examples:
             long,
             value_enum,
             default_value = "recommended",
-            help = "Icon size coverage level (affects number of icons generated)",
+            help = "Choose how many icon sizes to generate",
             value_name = "COVERAGE"
         )]
         coverage: SizeLevel,
 
         /// Also generate a web manifest file
-        #[arg(short, long, help = "Generate a manifest.webmanifest file for PWAs")]
+        #[arg(short, long, help = "Include a manifest.webmanifest file for PWAs")]
         manifest: bool,
 
         /// Output directory for generated files
@@ -92,7 +97,7 @@ Examples:
             short,
             long,
             default_value = ".",
-            help = "Directory where generated files will be saved",
+            help = "Where to save the generated files (default: current dir)",
             value_name = "DIR"
         )]
         output: String,
@@ -100,32 +105,38 @@ Examples:
         /// Allow raster source images (PNG/JPG) despite quality concerns
         #[arg(
             long,
-            help = "Allow raster sources (PNG/JPG) despite quality concerns at large sizes"
+            help = "Allow raster images like PNG/JPG (lower quality at large sizes)"
         )]
         raster_ok: bool,
     },
 
     /// Generate HTML <link> tags from a webmanifest file
     #[command(
-        about = "Generate HTML <link> tags from a manifest.webmanifest",
+        about = "Generate HTML <link> tags from your manifest.webmanifest file",
         long_about = "\
-Generate HTML <link> tags for favicon and app icons defined in a manifest.webmanifest file.
+Need the right HTML <link> tags for your favicon setup? We've got you.
 
-Purpose:
-  - Creates the proper <link> tags needed in your HTML head section
-  - Automatically sets correct 'rel' attributes based on icon purposes
-  - Organizes tags by importance and size
+What this command does:
+  - Reads your manifest.webmanifest file
+  - Generates <link> tags with proper rel and size attributes
+  - Sorts them by importance and size
+  - Lets you add custom URL prefixes (CDNs, asset paths, etc.)
 
-Examples:
+How to use it:
   > favis link ./public/manifest.webmanifest
   > favis link ./public/manifest.webmanifest --base /assets/icons --output ./public/favicon-links.html
   > favis link ./manifest.webmanifest --base https://cdn.example.com/icons
+
+Pro tips:
+  - By default, output goes to the terminal — perfect for copy-paste
+  - Use --output to save directly to an HTML file
+  - Use --base to prefix your icon URLs with a path or CDN
 "
     )]
     Link {
         /// Path to the manifest.webmanifest file
         #[arg(
-            help = "Path to existing manifest.webmanifest file to read",
+            help = "Path to your manifest.webmanifest file",
             value_name = "MANIFEST"
         )]
         manifest: String,
@@ -133,7 +144,7 @@ Examples:
         /// Base URL path to prefix for all icon links
         #[arg(
             long,
-            help = "Base URL to prefix for all icon paths (e.g., /assets or https://cdn.example.com)",
+            help = "Add a URL prefix to all icon paths (e.g. /assets or CDN URL)",
             value_name = "URL"
         )]
         base: Option<String>,
@@ -142,7 +153,7 @@ Examples:
         #[arg(
             short,
             long,
-            help = "Save HTML to file instead of printing to stdout",
+            help = "Save the output to a file instead of printing it",
             value_name = "FILE"
         )]
         output: Option<String>,

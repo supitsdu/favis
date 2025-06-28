@@ -11,7 +11,7 @@ pub fn create_spinner(msg: &str) -> ProgressBar {
         ProgressStyle::default_spinner()
             .tick_chars("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏ ")
             .template("{spinner:.green} {msg}")
-            .unwrap(),
+            .expect("Valid progress bar template"),
     );
     pb.set_message(format!("{}", msg.cyan().bold()));
     pb.enable_steady_tick(Duration::from_millis(60));
