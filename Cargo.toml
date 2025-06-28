@@ -1,10 +1,10 @@
 [package]
 name = "favis"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["E. M. Santos <contact@supitsdu.me"]
 license = "MIT"
-description = "Favicon and Web Icon Generator"
+description = "favis turns one image into all the favicons and web assets you need — fast, free, and open-source."
 homepage = "https://github.com/supitsdu/favis"
 repository = "https://github.com/supitsdu/favis"
 readme = "README.md"
