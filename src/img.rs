@@ -19,10 +19,10 @@ struct FileTracker {
 }
 
 impl FileTracker {
-    fn new() -> Self {
+    fn new_with_cancellation(cancelled: Arc<AtomicBool>) -> Self {
         Self {
             files: Vec::new(),
-            cancelled: Arc::new(AtomicBool::new(false)),
+            cancelled,
         }
     }
 
@@ -40,12 +40,6 @@ impl FileTracker {
                 let _ = fs::remove_file(file); // Ignore errors during cleanup
             }
         }
-    }
-
-    // TODO: Connect to signal handler for graceful interruption
-    #[allow(dead_code)]
-    fn cancel(&self) {
-        self.cancelled.store(true, Ordering::Relaxed);
     }
 }
 
@@ -65,12 +59,15 @@ impl Drop for FileTracker {
 /// * `out_dir` - Directory inside which to save outputs.
 /// * `png_sizes` - List of square sizes (in px) to generate PNGs.
 /// * `ico_sizes` - List of sizes to include in the ICO; if empty, no ICO is generated.
+/// * `progress` - Optional progress bar for user feedback.
+/// * `cancelled` - Shared cancellation flag for graceful interruption.
 pub fn process(
     src_path: &str,
     out_dir: &str,
     png_sizes: &[u32],
     ico_sizes: &[u32],
     progress: Option<&ProgressBar>,
+    cancelled: Arc<AtomicBool>,
 ) -> Result<()> {
     // Read and decode source
     if let Some(pb) = progress {
@@ -93,7 +90,7 @@ pub fn process(
     fs::create_dir_all(out_dir)
         .map_err(|_| FavisError::write_error(format!("Cannot create output directory: {}", out_dir)))?;
 
-    let mut file_tracker = FileTracker::new();
+    let mut file_tracker = FileTracker::new_with_cancellation(cancelled);
 
     // Helper: Save resized PNG
     fn save_resized_png(img: &image::DynamicImage, size: u32, out_dir: &str, file_tracker: &mut FileTracker) -> Result<()> {

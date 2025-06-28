@@ -3,6 +3,8 @@
 use clap::{CommandFactory, Parser};
 use owo_colors::OwoColorize;
 
+use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
+
 mod cli;
 mod error;
 mod img;
@@ -21,25 +23,26 @@ mod icon_sizes;
 fn main() -> Result<()> {
     let cli = Cli::parse();
     
+    // Setup global cancellation flag for signal handling
+    let cancelled = Arc::new(AtomicBool::new(false));
+    let cancelled_clone = cancelled.clone();
+    
     // Setup graceful signal handling for Ctrl+C
-    let result = std::panic::catch_unwind(|| {
-        if let Err(err) = run_cli(cli) {
-            err.display_friendly();
-            std::process::exit(1);
-        }
-    });
+    ctrlc::set_handler(move || {
+        cancelled_clone.store(true, Ordering::Relaxed);
+        // Silent cancellation - let the error handler provide the user message
+    }).expect("Error setting Ctrl+C handler");
 
-    match result {
-        Ok(_) => Ok(()),
-        Err(_) => {
-            eprintln!("{}: Operation interrupted", "Info".cyan().bold());
-            eprintln!("{}: Partial files may have been created", "Note".yellow().bold());
-            std::process::exit(130); // Standard exit code for Ctrl+C
-        }
+    // Run the CLI with cancellation support
+    if let Err(err) = run_cli(cli, cancelled) {
+        err.display_friendly();
+        std::process::exit(1);
     }
+    
+    Ok(())
 }
 
-fn run_cli(cli: Cli) -> Result<()> {
+fn run_cli(cli: Cli, cancelled: Arc<AtomicBool>) -> Result<()> {
     match cli.command {
         Some(Commands::Generate {
             source,
@@ -138,14 +141,10 @@ fn run_cli(cli: Cli) -> Result<()> {
                     .map_err(|_| FavisError::write_error("Cannot save temporary PNG file"))?;
 
                 // Now process it like a regular PNG
-                match img::process(&temp_path, &output, &png_sizes, &ico_sizes, Some(&spinner)) {
+                match img::process(&temp_path, &output, &png_sizes, &ico_sizes, Some(&spinner), cancelled.clone()) {
                     Ok(_) => {},
                     Err(ref e) if e.to_string().contains("cancelled") => {
-                        spinner.abandon_with_message(format!(
-                            "{} {}",
-                            "⚠".yellow().bold(),
-                            "Operation cancelled - cleaning up temporary files...".yellow().bold()
-                        ));
+                        spinner.abandon();
                         return Err(FavisError::user_cancelled());
                     }
                     Err(e) => return Err(e),
@@ -160,14 +159,10 @@ fn run_cli(cli: Cli) -> Result<()> {
                     let _ = std::fs::remove_file(temp_file); // Ignore cleanup errors
                 }
             } else {
-                match img::process(&source, &output, &png_sizes, &ico_sizes, Some(&spinner)) {
+                match img::process(&source, &output, &png_sizes, &ico_sizes, Some(&spinner), cancelled.clone()) {
                     Ok(_) => {},
                     Err(ref e) if e.to_string().contains("cancelled") => {
-                        spinner.abandon_with_message(format!(
-                            "{} {}",
-                            "⚠".yellow().bold(),
-                            "Operation cancelled by user".yellow().bold()
-                        ));
+                        spinner.abandon();
                         return Err(FavisError::user_cancelled());
                     }
                     Err(e) => return Err(e),

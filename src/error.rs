@@ -68,7 +68,7 @@ impl FavisError {
     pub fn user_cancelled() -> Self {
         Self::new(
             "Operation cancelled by user",
-            Some("No worries! Partial files have been cleaned up.".to_string())
+            Some("All partial files have been cleaned up automatically.".to_string())
         )
     }
 
